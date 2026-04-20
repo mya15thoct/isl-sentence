@@ -22,7 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))   # vsl-sentence root
 import tensorflow as tf
 
 from config import (
-    WORD_MODEL_PATH, WORD_SEQUENCE_PATH, WORD_SEQUENCE_LENGTH, DICTIONARY_SAVE_PATH
+    WORD_MODEL_PATH, WORD_SEQUENCE_PATH, DICTIONARY_SAVE_PATH
 )
 
 
@@ -102,6 +102,10 @@ def build_attention_dictionary(
 
     word_model        = tf.keras.models.load_model(model_path)
     feature_extractor = build_feature_extractor(word_model)
+
+    # Lấy sequence length từ model thay vì hardcode
+    seq_len = word_model.input_shape[1]
+    print(f"Model sequence length: {seq_len}")
     print("\nFeature extractor built.\n")
 
     gloss_folders = sorted([d for d in sequence_path.iterdir() if d.is_dir()])
@@ -123,8 +127,8 @@ def build_attention_dictionary(
         for npy_file in npy_files:
             seq      = np.load(npy_file).astype(np.float32)
             T        = seq.shape[0]
-            padded   = np.zeros((WORD_SEQUENCE_LENGTH, 1662), dtype=np.float32)
-            real_len = min(T, WORD_SEQUENCE_LENGTH)
+            padded   = np.zeros((seq_len, 1662), dtype=np.float32)
+            real_len = min(T, seq_len)
             padded[:real_len] = seq[:real_len]
 
             feats  = feature_extractor(padded[np.newaxis], training=False)
