@@ -55,10 +55,12 @@ def compute_gate_weight(pose_feat, face_feat, hand_feat, attn_weights):
 
     Returns: (3,) — [pose_importance, face_importance, hand_importance]
     """
+    # Normalize by sqrt(dims) to remove dimensionality bias before softmax
+    # (face has 128 dims vs 64 for pose/hand — raw norm would always favor face)
     norms     = np.stack([
-        np.linalg.norm(pose_feat, axis=-1),
-        np.linalg.norm(face_feat, axis=-1),
-        np.linalg.norm(hand_feat, axis=-1),
+        np.linalg.norm(pose_feat, axis=-1) / np.sqrt(pose_feat.shape[-1]),
+        np.linalg.norm(face_feat, axis=-1) / np.sqrt(face_feat.shape[-1]),
+        np.linalg.norm(hand_feat, axis=-1) / np.sqrt(hand_feat.shape[-1]),
     ], axis=-1)                                                     # (T, 3)
     exp_norms = np.exp(norms - norms.max(axis=-1, keepdims=True))
     g_t       = exp_norms / exp_norms.sum(axis=-1, keepdims=True)  # (T, 3)
