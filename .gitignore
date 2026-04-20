@@ -1,0 +1,36 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Data & model files
+*.npy
+*.h5
+*.pkl
+*.keras
+*.ckpt
+checkpoints/
+data/attention_dictionary/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Context summary
+txt
