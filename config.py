@@ -32,7 +32,8 @@ ACTION_NAMES_PATH    = DICTIONARY_SAVE_PATH / 'action_names.json'
 
 # Word Model — combined model lives in ISL-Sequences (READ ONLY for isl-sentence)
 WORD_MODEL_PATH      = ISL_SEQ_DIR / 'checkpoints' / 'best_model_combined'
-WORD_SEQUENCE_PATH   = SERVER_BASE / 'recognition' / 'sequences'
+WORD_SEQUENCE_PATH   = SERVER_BASE / 'recognition' / 'sequences'   # video keypoints
+ISL_WORD_PATH        = ISL_SEQ_DIR / 'word'                         # image keypoints
 ACTION_MAPPING_PATH  = ISL_SEQ_DIR / 'checkpoints' / 'action_mapping_combined.json'
 
 # ── Data Config ───────────────────────────────────────────────────────────────

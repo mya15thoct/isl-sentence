@@ -22,7 +22,8 @@ sys.path.append(str(Path(__file__).parent.parent.parent))   # vsl-sentence root
 import tensorflow as tf
 
 from config import (
-    WORD_MODEL_PATH, WORD_SEQUENCE_PATH, DICTIONARY_SAVE_PATH
+    WORD_MODEL_PATH, WORD_SEQUENCE_PATH, ISL_WORD_PATH,
+    ACTION_MAPPING_PATH, DICTIONARY_SAVE_PATH,
 )
 
 
@@ -76,53 +77,70 @@ def compute_gate_weight(pose_feat, face_feat, hand_feat, attn_weights):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_attention_dictionary(
-    model_path:    str  = None,
-    sequence_path: Path = None,
-    save_path:     str  = None,
+    model_path:          str  = None,
+    video_sequence_path: str  = None,
+    image_sequence_path: str  = None,
+    action_mapping_path: str  = None,
+    save_path:           str  = None,
 ) -> dict:
     """
-    Build D from all word sequences in sequence_path.
+    Build D from all word sequences, covering the full combined vocabulary.
+
+    For each gloss in action_mapping_combined.json:
+      - Prefers video sequences (recognition/sequences/)
+      - Falls back to image sequences (ISL-Sequences/word/)
 
     Saves:
       <save_path>/dictionary.npy    ← used in training
       <save_path>/dictionary.json   ← human-readable
-      <save_path>/action_names.json ← gloss index mapping
+      <save_path>/action_names.json ← ordered gloss list (matches model output)
 
     Returns: {gloss_name: np.array(3,)}
     """
-    model_path    = model_path    or str(WORD_MODEL_PATH)
-    sequence_path = Path(sequence_path or WORD_SEQUENCE_PATH)
-    save_path     = save_path     or str(DICTIONARY_SAVE_PATH)
+    model_path          = model_path          or str(WORD_MODEL_PATH)
+    video_sequence_path = Path(video_sequence_path or WORD_SEQUENCE_PATH)
+    image_sequence_path = Path(image_sequence_path or ISL_WORD_PATH)
+    action_mapping_path = action_mapping_path  or str(ACTION_MAPPING_PATH)
+    save_path           = save_path            or str(DICTIONARY_SAVE_PATH)
 
     print("=" * 60)
     print("BUILDING ATTENTION DICTIONARY [D]")
     print("=" * 60)
-
-    print(f"\nWord Model  : {model_path}")
-    print(f"Sequences   : {sequence_path}")
-    print(f"Save to     : {save_path}")
+    print(f"\nWord Model     : {model_path}")
+    print(f"Video seqs     : {video_sequence_path}")
+    print(f"Image seqs     : {image_sequence_path}")
+    print(f"Action mapping : {action_mapping_path}")
+    print(f"Save to        : {save_path}")
 
     word_model        = tf.keras.models.load_model(model_path)
     feature_extractor = build_feature_extractor(word_model)
-
-    # Lấy sequence length từ model thay vì hardcode
-    seq_len = word_model.input_shape[1]
+    seq_len           = word_model.input_shape[1]
     print(f"Model sequence length: {seq_len}")
     print("\nFeature extractor built.\n")
 
-    gloss_folders = sorted([d for d in sequence_path.iterdir() if d.is_dir()])
-    print(f"Found {len(gloss_folders)} gloss classes.\n")
+    # Use action_mapping to get full ordered class list (matches model output)
+    with open(action_mapping_path) as f:
+        mapping = json.load(f)
+    action_names = [mapping[str(i)] for i in range(len(mapping))]
+    print(f"Found {len(action_names)} gloss classes (from action_mapping).\n")
 
-    D            = {}
-    action_names = []
+    D = {}
 
-    for idx, gloss_folder in enumerate(gloss_folders):
-        gloss_name = gloss_folder.name
-        action_names.append(gloss_name)
+    for idx, gloss_name in enumerate(action_names):
+        # Prefer video sequences; fall back to image sequences
+        vid_folder = video_sequence_path / gloss_name
+        img_folder = image_sequence_path / gloss_name
 
-        npy_files = sorted(gloss_folder.glob('*.npy'))
+        if vid_folder.exists():
+            npy_files = sorted(f for f in vid_folder.glob('*.npy')
+                               if '_static' not in f.stem)
+            source = 'video'
+        else:
+            npy_files = sorted(img_folder.glob('*.npy')) if img_folder.exists() else []
+            source = 'image'
+
         if not npy_files:
-            print(f"  [SKIP] {gloss_name} — no .npy files found")
+            print(f"  [SKIP] {gloss_name} — no sequences found")
             continue
 
         gate_weights = []
@@ -142,10 +160,10 @@ def build_attention_dictionary(
             gate_weights.append(compute_gate_weight(pose_f, face_f, hand_f, alpha))
 
         D[gloss_name] = np.mean(gate_weights, axis=0)
-        print(f"  [{idx+1:3d}/{len(gloss_folders)}] {gloss_name:30s} "
+        print(f"  [{idx+1:3d}/{len(action_names)}] {gloss_name:30s} "
               f"pose={D[gloss_name][0]:.3f}  "
               f"face={D[gloss_name][1]:.3f}  "
-              f"hand={D[gloss_name][2]:.3f}")
+              f"hand={D[gloss_name][2]:.3f}  [{source}]")
 
     # ── Save ──────────────────────────────────────────────────────────────────
     Path(save_path).mkdir(parents=True, exist_ok=True)
@@ -173,13 +191,17 @@ def build_attention_dictionary(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path',    type=str, default=None)
-    parser.add_argument('--sequence_path', type=str, default=None)
-    parser.add_argument('--save_path',     type=str, default=None)
+    parser.add_argument('--model_path',          type=str, default=None)
+    parser.add_argument('--video_sequence_path', type=str, default=None)
+    parser.add_argument('--image_sequence_path', type=str, default=None)
+    parser.add_argument('--action_mapping_path', type=str, default=None)
+    parser.add_argument('--save_path',           type=str, default=None)
     args = parser.parse_args()
 
     build_attention_dictionary(
         model_path=args.model_path,
-        sequence_path=args.sequence_path,
+        video_sequence_path=args.video_sequence_path,
+        image_sequence_path=args.image_sequence_path,
+        action_mapping_path=args.action_mapping_path,
         save_path=args.save_path,
     )
