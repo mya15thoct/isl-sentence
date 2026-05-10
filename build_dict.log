@@ -1,0 +1,439 @@
+nohup: ignoring input
+2026-04-20 16:26:32.623167: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-04-20 16:26:32.676514: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2026-04-20 16:26:32.676599: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2026-04-20 16:26:32.678159: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2026-04-20 16:26:32.686550: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-04-20 16:26:33.688123: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+2026-04-20 16:26:35.506309: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1929] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 46756 MB memory:  -> device: 0, name: NVIDIA RTX A6000, pci bus id: 0000:6b:00.0, compute capability: 8.6
+2026-04-20 16:26:43.690776: I external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:454] Loaded cuDNN version 8907
+============================================================
+BUILDING ATTENTION DICTIONARY [D]
+============================================================
+
+Word Model  : /mnt/ngan/recognition/checkpoints/best_model_combined
+Sequences   : /mnt/ngan/recognition/sequences
+Save to     : /mnt/ngan/vsl_sentence/data/attention_dictionary
+Model sequence length: 93
+
+Feature extractor built.
+
+Found 409 gloss classes.
+
+  [  1/409] ABUSE                          pose=0.021  face=0.862  hand=0.117
+  [  2/409] AFRAID                         pose=0.034  face=0.946  hand=0.020
+  [  3/409] AGREE                          pose=0.028  face=0.946  hand=0.026
+  [  4/409] ALL                            pose=0.035  face=0.723  hand=0.242
+  [  5/409] ANGRY                          pose=0.026  face=0.763  hand=0.210
+  [  6/409] ANYTHING                       pose=0.016  face=0.727  hand=0.257
+  [  7/409] APPRECIATE                     pose=0.028  face=0.653  hand=0.319
+  [  8/409] A_LOT                          pose=0.064  face=0.904  hand=0.032
+  [  9/409] Actor                          pose=0.020  face=0.659  hand=0.320
+  [ 10/409] Adult                          pose=0.020  face=0.675  hand=0.305
+  [ 11/409] Afternoon                      pose=0.039  face=0.709  hand=0.252
+  [ 12/409] Alright                        pose=0.014  face=0.580  hand=0.407
+  [ 13/409] Animal                         pose=0.020  face=0.703  hand=0.277
+  [ 14/409] Artist                         pose=0.018  face=0.639  hand=0.343
+  [ 15/409] Attack                         pose=0.027  face=0.664  hand=0.309
+  [ 16/409] Author                         pose=0.024  face=0.702  hand=0.274
+  [ 17/409] BECOME                         pose=0.029  face=0.635  hand=0.336
+  [ 18/409] BORED                          pose=0.036  face=0.902  hand=0.062
+  [ 19/409] BRING                          pose=0.026  face=0.724  hand=0.250
+  [ 20/409] Baby                           pose=0.014  face=0.551  hand=0.435
+  [ 21/409] Bag                            pose=0.010  face=0.418  hand=0.572
+  [ 22/409] Ball                           pose=0.012  face=0.518  hand=0.470
+  [ 23/409] Bank                           pose=0.011  face=0.439  hand=0.549
+  [ 24/409] Bathroom                       pose=0.016  face=0.652  hand=0.332
+  [ 25/409] Bear                           pose=0.018  face=0.939  hand=0.043
+  [ 26/409] Beautiful                      pose=0.020  face=0.653  hand=0.328
+  [ 27/409] Bed                            pose=0.022  face=0.700  hand=0.279
+  [ 28/409] Bedroom                        pose=0.020  face=0.694  hand=0.286
+  [ 29/409] Bicycle                        pose=0.013  face=0.539  hand=0.448
+  [ 30/409] Bill                           pose=0.016  face=0.604  hand=0.380
+  [ 31/409] Bird                           pose=0.024  face=0.641  hand=0.335
+  [ 32/409] Black                          pose=0.028  face=0.678  hand=0.294
+  [ 33/409] Blind                          pose=0.013  face=0.528  hand=0.459
+  [ 34/409] Blue                           pose=0.016  face=0.624  hand=0.360
+  [ 35/409] Boat                           pose=0.013  face=0.563  hand=0.424
+  [ 36/409] Book                           pose=0.015  face=0.561  hand=0.424
+  [ 37/409] Box                            pose=0.021  face=0.730  hand=0.249
+  [ 38/409] Boy                            pose=0.017  face=0.594  hand=0.389
+  [ 39/409] Break                          pose=0.022  face=0.938  hand=0.041
+  [ 40/409] Brinjal                        pose=0.020  face=0.922  hand=0.058
+  [ 41/409] Brother                        pose=0.021  face=0.729  hand=0.250
+  [ 42/409] Brown                          pose=0.014  face=0.598  hand=0.388
+  [ 43/409] Budget                         pose=0.018  face=0.937  hand=0.045
+  [ 44/409] Bus                            pose=0.017  face=0.601  hand=0.382
+  [ 45/409] Busy                           pose=0.022  face=0.918  hand=0.059
+  [ 46/409] CHAT                           pose=0.025  face=0.947  hand=0.028
+  [ 47/409] CLASS                          pose=0.025  face=0.957  hand=0.018
+  [ 48/409] COLLEGE_SCHOOL                 pose=0.026  face=0.754  hand=0.219
+  [ 49/409] COMB                           pose=0.040  face=0.935  hand=0.025
+  [ 50/409] CONGRATULATIONS                pose=0.017  face=0.822  hand=0.161
+  [ 51/409] CRYING                         pose=0.020  face=0.752  hand=0.228
+  [ 52/409] Cabbage                        pose=0.018  face=0.936  hand=0.046
+  [ 53/409] Camera                         pose=0.029  face=0.660  hand=0.311
+  [ 54/409] Car                            pose=0.024  face=0.712  hand=0.264
+  [ 55/409] Card                           pose=0.017  face=0.649  hand=0.333
+  [ 56/409] Carrot                         pose=0.017  face=0.930  hand=0.053
+  [ 57/409] Cat                            pose=0.021  face=0.566  hand=0.413
+  [ 58/409] Cauliflower                    pose=0.017  face=0.943  hand=0.040
+  [ 59/409] Cell_phone                     pose=0.019  face=0.613  hand=0.368
+  [ 60/409] Chair                          pose=0.013  face=0.407  hand=0.580
+  [ 61/409] Child                          pose=0.015  face=0.603  hand=0.382
+  [ 62/409] Chilli                         pose=0.017  face=0.931  hand=0.051
+  [ 63/409] City                           pose=0.014  face=0.488  hand=0.499
+  [ 64/409] Clock                          pose=0.023  face=0.684  hand=0.294
+  [ 65/409] Close                          pose=0.022  face=0.932  hand=0.047
+  [ 66/409] Clothing                       pose=0.014  face=0.643  hand=0.343
+  [ 67/409] Colour                         pose=0.015  face=0.617  hand=0.368
+  [ 68/409] Come                           pose=0.019  face=0.923  hand=0.058
+  [ 69/409] Computer                       pose=0.025  face=0.689  hand=0.286
+  [ 70/409] Cook                           pose=0.016  face=0.942  hand=0.042
+  [ 71/409] Court                          pose=0.015  face=0.556  hand=0.430
+  [ 72/409] Cow                            pose=0.046  face=0.688  hand=0.266
+  [ 73/409] Crocodile                      pose=0.022  face=0.934  hand=0.043
+  [ 74/409] Crowd                          pose=0.025  face=0.608  hand=0.367
+  [ 75/409] Cry                            pose=0.016  face=0.946  hand=0.038
+  [ 76/409] Cucumber                       pose=0.020  face=0.934  hand=0.046
+  [ 77/409] DARE                           pose=0.040  face=0.936  hand=0.024
+  [ 78/409] DIFFERENCE                     pose=0.026  face=0.926  hand=0.048
+  [ 79/409] DILEMMA                        pose=0.034  face=0.877  hand=0.089
+  [ 80/409] DISAPPOINTED                   pose=0.020  face=0.724  hand=0.256
+  [ 81/409] DO                             pose=0.022  face=0.781  hand=0.197
+  [ 82/409] DON'T_CARE                     pose=0.034  face=0.921  hand=0.045
+  [ 83/409] Daughter                       pose=0.016  face=0.598  hand=0.386
+  [ 84/409] Deaf                           pose=0.015  face=0.636  hand=0.349
+  [ 85/409] Death                          pose=0.014  face=0.595  hand=0.391
+  [ 86/409] Deer                           pose=0.018  face=0.929  hand=0.054
+  [ 87/409] Doctor                         pose=0.014  face=0.561  hand=0.425
+  [ 88/409] Dog                            pose=0.014  face=0.614  hand=0.372
+  [ 89/409] Door                           pose=0.016  face=0.637  hand=0.347
+  [ 90/409] Dream                          pose=0.024  face=0.652  hand=0.323
+  [ 91/409] Dress                          pose=0.014  face=0.615  hand=0.371
+  [ 92/409] Drink                          pose=0.019  face=0.928  hand=0.053
+  [ 93/409] ENJOY                          pose=0.025  face=0.811  hand=0.163
+  [ 94/409] Election                       pose=0.018  face=0.690  hand=0.291
+  [ 95/409] Elephant                       pose=0.022  face=0.925  hand=0.053
+  [ 96/409] Energy                         pose=0.012  face=0.419  hand=0.569
+  [ 97/409] Evening                        pose=0.013  face=0.585  hand=0.402
+  [ 98/409] Exam                           pose=0.023  face=0.938  hand=0.039
+  [ 99/409] Exercise                       pose=0.029  face=0.602  hand=0.368
+  [100/409] FAVOUR                         pose=0.029  face=0.947  hand=0.024
+  [101/409] FINE                           pose=0.024  face=0.812  hand=0.163
+  [102/409] FOOD                           pose=0.018  face=0.812  hand=0.170
+  [103/409] FREE                           pose=0.030  face=0.948  hand=0.021
+  [104/409] FROM                           pose=0.021  face=0.851  hand=0.128
+  [105/409] Fall                           pose=0.022  face=0.548  hand=0.431
+  [106/409] Family                         pose=0.016  face=0.686  hand=0.298
+  [107/409] Fan                            pose=0.039  face=0.682  hand=0.278
+  [108/409] Father                         pose=0.015  face=0.600  hand=0.386
+  [109/409] Fedup                          pose=0.018  face=0.928  hand=0.055
+  [110/409] Fever                          pose=0.017  face=0.915  hand=0.067
+  [111/409] Fish                           pose=0.013  face=0.563  hand=0.424
+  [112/409] Friday                         pose=0.021  face=0.718  hand=0.261
+  [113/409] Friend                         pose=0.017  face=0.650  hand=0.333
+  [114/409] GO                             pose=0.025  face=0.827  hand=0.148
+  [115/409] GRATEFUL                       pose=0.025  face=0.934  hand=0.041
+  [116/409] Gift                           pose=0.012  face=0.544  hand=0.444
+  [117/409] Giraffe                        pose=0.016  face=0.932  hand=0.052
+  [118/409] Girl                           pose=0.019  face=0.683  hand=0.298
+  [119/409] Give                           pose=0.018  face=0.920  hand=0.062
+  [120/409] God                            pose=0.021  face=0.675  hand=0.304
+  [121/409] Good_Morning                   pose=0.017  face=0.827  hand=0.156
+  [122/409] Good_afternoon                 pose=0.022  face=0.835  hand=0.143
+  [123/409] Good_evening                   pose=0.016  face=0.659  hand=0.325
+  [124/409] Good_night                     pose=0.016  face=0.681  hand=0.303
+  [125/409] Grandfather                    pose=0.014  face=0.633  hand=0.354
+  [126/409] Grandmother                    pose=0.017  face=0.677  hand=0.306
+  [127/409] Green                          pose=0.015  face=0.566  hand=0.419
+  [128/409] Grey                           pose=0.022  face=0.595  hand=0.383
+  [129/409] Ground                         pose=0.019  face=0.583  hand=0.398
+  [130/409] Gun                            pose=0.014  face=0.557  hand=0.429
+  [131/409] HAD                            pose=0.014  face=0.846  hand=0.140
+  [132/409] HAPPENED                       pose=0.021  face=0.611  hand=0.368
+  [133/409] HEAR                           pose=0.021  face=0.559  hand=0.420
+  [134/409] HEART                          pose=0.016  face=0.698  hand=0.286
+  [135/409] HELLO_HI                       pose=0.028  face=0.844  hand=0.128
+  [136/409] HELP                           pose=0.022  face=0.898  hand=0.080
+  [137/409] HIDING                         pose=0.034  face=0.908  hand=0.057
+  [138/409] HOW                            pose=0.021  face=0.810  hand=0.170
+  [139/409] HUNGRY                         pose=0.016  face=0.828  hand=0.156
+  [140/409] HURT                           pose=0.019  face=0.902  hand=0.079
+  [141/409] Hat                            pose=0.042  face=0.653  hand=0.305
+  [142/409] Hello                          pose=0.021  face=0.824  hand=0.155
+  [143/409] Horse                          pose=0.010  face=0.365  hand=0.625
+  [144/409] Hospital                       pose=0.019  face=0.652  hand=0.329
+  [145/409] Hour                           pose=0.014  face=0.599  hand=0.387
+  [146/409] House                          pose=0.020  face=0.540  hand=0.440
+  [147/409] How_are_you                    pose=0.019  face=0.713  hand=0.268
+  [148/409] Hug                            pose=0.031  face=0.900  hand=0.069
+  [149/409] Husband                        pose=0.017  face=0.611  hand=0.372
+  [150/409] I                              pose=0.012  face=0.618  hand=0.370
+  [151/409] I_ME_MINE_MY                   pose=0.014  face=0.815  hand=0.170
+  [152/409] India                          pose=0.030  face=0.676  hand=0.294
+  [153/409] Injury                         pose=0.023  face=0.917  hand=0.060
+  [154/409] Interview                      pose=0.021  face=0.930  hand=0.050
+  [155/409] Job                            pose=0.028  face=0.659  hand=0.313
+  [156/409] Jump                           pose=0.020  face=0.926  hand=0.054
+  [157/409] KIND                           pose=0.020  face=0.894  hand=0.086
+  [158/409] Karnataka                      pose=0.020  face=0.916  hand=0.064
+  [159/409] Key                            pose=0.016  face=0.821  hand=0.163
+  [160/409] King                           pose=0.031  face=0.676  hand=0.293
+  [161/409] Kitchen                        pose=0.017  face=0.641  hand=0.341
+  [162/409] Knife                          pose=0.022  face=0.925  hand=0.053
+  [163/409] LEAVE                          pose=0.018  face=0.846  hand=0.136
+  [164/409] LIKE                           pose=0.026  face=0.794  hand=0.180
+  [165/409] LIKE_LOVE                      pose=0.031  face=0.913  hand=0.056
+  [166/409] Lamp                           pose=0.039  face=0.637  hand=0.323
+  [167/409] Laptop                         pose=0.017  face=0.578  hand=0.406
+  [168/409] Lawyer                         pose=0.011  face=0.423  hand=0.566
+  [169/409] Lemon                          pose=0.017  face=0.929  hand=0.054
+  [170/409] Letter                         pose=0.022  face=0.691  hand=0.286
+  [171/409] Library                        pose=0.016  face=0.558  hand=0.426
+  [172/409] Lion                           pose=0.029  face=0.866  hand=0.106
+  [173/409] Location                       pose=0.016  face=0.514  hand=0.470
+  [174/409] Lock                           pose=0.015  face=0.543  hand=0.442
+  [175/409] MEAN_IT                        pose=0.030  face=0.916  hand=0.054
+  [176/409] MEET                           pose=0.020  face=0.872  hand=0.108
+  [177/409] Man                            pose=0.018  face=0.851  hand=0.130
+  [178/409] Manager                        pose=0.016  face=0.633  hand=0.350
+  [179/409] Market                         pose=0.012  face=0.503  hand=0.485
+  [180/409] Marriage                       pose=0.017  face=0.619  hand=0.364
+  [181/409] Maths                          pose=0.022  face=0.939  hand=0.039
+  [182/409] Maybe                          pose=0.022  face=0.935  hand=0.042
+  [183/409] Mean                           pose=0.007  face=0.320  hand=0.673
+  [184/409] Medicine                       pose=0.019  face=0.615  hand=0.366
+  [185/409] Minute                         pose=0.012  face=0.531  hand=0.457
+  [186/409] Monday                         pose=0.017  face=0.574  hand=0.409
+  [187/409] Money                          pose=0.012  face=0.582  hand=0.406
+  [188/409] Monkey                         pose=0.023  face=0.938  hand=0.040
+  [189/409] Month                          pose=0.011  face=0.367  hand=0.622
+  [190/409] Morning                        pose=0.017  face=0.642  hand=0.342
+  [191/409] Mother                         pose=0.017  face=0.653  hand=0.329
+  [192/409] Mouse                          pose=0.009  face=0.471  hand=0.520
+  [193/409] NAME                           pose=0.026  face=0.912  hand=0.063
+  [194/409] NOT                            pose=0.026  face=0.875  hand=0.099
+  [195/409] NUMBER                         pose=0.014  face=0.668  hand=0.318
+  [196/409] Neighbour                      pose=0.017  face=0.576  hand=0.407
+  [197/409] Newspaper                      pose=0.020  face=0.575  hand=0.405
+  [198/409] Nice                           pose=0.015  face=0.523  hand=0.462
+  [199/409] Night                          pose=0.014  face=0.550  hand=0.436
+  [200/409] OLD_AGE                        pose=0.018  face=0.767  hand=0.215
+  [201/409] ON_THE_WAY                     pose=0.022  face=0.613  hand=0.365
+  [202/409] OUTSIDE                        pose=0.031  face=0.889  hand=0.080
+  [203/409] Office                         pose=0.015  face=0.617  hand=0.368
+  [204/409] Onion                          pose=0.016  face=0.938  hand=0.045
+  [205/409] Orange                         pose=0.023  face=0.622  hand=0.356
+  [206/409] PHONE                          pose=0.020  face=0.765  hand=0.215
+  [207/409] PLACE                          pose=0.017  face=0.645  hand=0.338
+  [208/409] PLEASE                         pose=0.024  face=0.950  hand=0.026
+  [209/409] PREPARE                        pose=0.036  face=0.745  hand=0.219
+  [210/409] PROMISE                        pose=0.022  face=0.939  hand=0.038
+  [211/409] Page                           pose=0.016  face=0.682  hand=0.301
+  [212/409] Paint                          pose=0.025  face=0.583  hand=0.393
+  [213/409] Pant                           pose=0.011  face=0.453  hand=0.536
+  [214/409] Paper                          pose=0.016  face=0.576  hand=0.408
+  [215/409] Parent                         pose=0.016  face=0.667  hand=0.317
+  [216/409] Park                           pose=0.013  face=0.517  hand=0.470
+  [217/409] Patient                        pose=0.016  face=0.638  hand=0.346
+  [218/409] Peace                          pose=0.019  face=0.666  hand=0.315
+  [219/409] Peacock                        pose=0.028  face=0.868  hand=0.103
+  [220/409] Pen                            pose=0.013  face=0.535  hand=0.452
+  [221/409] Pencil                         pose=0.012  face=0.577  hand=0.411
+  [222/409] Photograph                     pose=0.018  face=0.566  hand=0.416
+  [223/409] Pigeon                         pose=0.022  face=0.900  hand=0.077
+  [224/409] Pink                           pose=0.016  face=0.669  hand=0.315
+  [225/409] Plane                          pose=0.022  face=0.582  hand=0.396
+  [226/409] Player                         pose=0.016  face=0.584  hand=0.400
+  [227/409] Pleased                        pose=0.012  face=0.587  hand=0.401
+  [228/409] Pocket                         pose=0.017  face=0.675  hand=0.308
+  [229/409] Police                         pose=0.016  face=0.596  hand=0.387
+  [230/409] Pour                           pose=0.019  face=0.908  hand=0.073
+  [231/409] President                      pose=0.019  face=0.668  hand=0.312
+  [232/409] Price                          pose=0.017  face=0.687  hand=0.295
+  [233/409] Priest                         pose=0.033  face=0.638  hand=0.329
+  [234/409] Queen                          pose=0.030  face=0.668  hand=0.301
+  [235/409] REALLY                         pose=0.016  face=0.852  hand=0.132
+  [236/409] REPEAT                         pose=0.015  face=0.884  hand=0.100
+  [237/409] ROOM                           pose=0.037  face=0.829  hand=0.134
+  [238/409] Race                           pose=0.015  face=0.614  hand=0.371
+  [239/409] Radio                          pose=0.011  face=0.433  hand=0.555
+  [240/409] Radish                         pose=0.016  face=0.940  hand=0.044
+  [241/409] Red                            pose=0.014  face=0.575  hand=0.411
+  [242/409] Religion                       pose=0.023  face=0.716  hand=0.261
+  [243/409] Reporter                       pose=0.017  face=0.531  hand=0.452
+  [244/409] Restaurant                     pose=0.014  face=0.610  hand=0.376
+  [245/409] Ring                           pose=0.016  face=0.655  hand=0.329
+  [246/409] SERVE                          pose=0.033  face=0.930  hand=0.036
+  [247/409] SHIRT                          pose=0.019  face=0.846  hand=0.134
+  [248/409] SITTING                        pose=0.020  face=0.808  hand=0.172
+  [249/409] SLEEP                          pose=0.030  face=0.907  hand=0.063
+  [250/409] SLOWER                         pose=0.044  face=0.930  hand=0.026
+  [251/409] SOFTLY                         pose=0.021  face=0.767  hand=0.211
+  [252/409] SOMETHING                      pose=0.030  face=0.944  hand=0.026
+  [253/409] SOME_HOW                       pose=0.022  face=0.628  hand=0.350
+  [254/409] SOME_ONE                       pose=0.033  face=0.727  hand=0.240
+  [255/409] SORRY                          pose=0.021  face=0.891  hand=0.087
+  [256/409] SO_MUCH                        pose=0.088  face=0.851  hand=0.061
+  [257/409] SPEAK                          pose=0.017  face=0.813  hand=0.170
+  [258/409] STOP                           pose=0.020  face=0.824  hand=0.156
+  [259/409] STUBBORN                       pose=0.017  face=0.916  hand=0.067
+  [260/409] SURE                           pose=0.016  face=0.714  hand=0.270
+  [261/409] Saturday                       pose=0.025  face=0.736  hand=0.239
+  [262/409] School                         pose=0.019  face=0.573  hand=0.408
+  [263/409] Science                        pose=0.022  face=0.684  hand=0.294
+  [264/409] Screen                         pose=0.034  face=0.637  hand=0.329
+  [265/409] Season                         pose=0.028  face=0.734  hand=0.237
+  [266/409] Second                         pose=0.013  face=0.628  hand=0.359
+  [267/409] Secretary                      pose=0.014  face=0.570  hand=0.416
+  [268/409] Shoes                          pose=0.015  face=0.615  hand=0.370
+  [269/409] Shop                           pose=0.009  face=0.414  hand=0.576
+  [270/409] Sign                           pose=0.015  face=0.573  hand=0.413
+  [271/409] Sister                         pose=0.018  face=0.680  hand=0.302
+  [272/409] Skirt                          pose=0.009  face=0.259  hand=0.731
+  [273/409] Soap                           pose=0.014  face=0.566  hand=0.420
+  [274/409] Soldier                        pose=0.012  face=0.396  hand=0.592
+  [275/409] Son                            pose=0.016  face=0.669  hand=0.315
+  [276/409] Sparrow                        pose=0.039  face=0.886  hand=0.075
+  [277/409] Sport                          pose=0.016  face=0.620  hand=0.364
+  [278/409] Spring                         pose=0.021  face=0.720  hand=0.258
+  [279/409] Still                          pose=0.021  face=0.849  hand=0.130
+  [280/409] Street                         pose=0.011  face=0.481  hand=0.509
+  [281/409] Student                        pose=0.019  face=0.626  hand=0.355
+  [282/409] Suit                           pose=0.014  face=0.574  hand=0.411
+  [283/409] Summer                         pose=0.023  face=0.618  hand=0.359
+  [284/409] Sunday                         pose=0.021  face=0.704  hand=0.274
+  [285/409] Switch                         pose=0.019  face=0.915  hand=0.066
+  [286/409] T-Shirt                        pose=0.016  face=0.672  hand=0.311
+  [287/409] TAKE_CARE                      pose=0.022  face=0.888  hand=0.090
+  [288/409] TAKE_TIME                      pose=0.014  face=0.937  hand=0.049
+  [289/409] TALK                           pose=0.051  face=0.926  hand=0.023
+  [290/409] TELL                           pose=0.017  face=0.736  hand=0.247
+  [291/409] THANK                          pose=0.016  face=0.778  hand=0.206
+  [292/409] THAT                           pose=0.017  face=0.814  hand=0.169
+  [293/409] THINGS                         pose=0.020  face=0.779  hand=0.201
+  [294/409] THINK                          pose=0.023  face=0.779  hand=0.197
+  [295/409] THIRSTY                        pose=0.018  face=0.901  hand=0.081
+  [296/409] TIRED                          pose=0.030  face=0.947  hand=0.024
+  [297/409] TRUST                          pose=0.017  face=0.720  hand=0.264
+  [298/409] TRUTH                          pose=0.022  face=0.892  hand=0.086
+  [299/409] TURN_ON                        pose=0.045  face=0.626  hand=0.329
+  [300/409] Table                          pose=0.012  face=0.444  hand=0.544
+  [301/409] Tea                            pose=0.018  face=0.929  hand=0.053
+  [302/409] Teacher                        pose=0.018  face=0.640  hand=0.343
+  [303/409] Team                           pose=0.015  face=0.553  hand=0.432
+  [304/409] Technology                     pose=0.019  face=0.553  hand=0.427
+  [305/409] Telephone                      pose=0.019  face=0.637  hand=0.344
+  [306/409] Television                     pose=0.018  face=0.578  hand=0.404
+  [307/409] Temple                         pose=0.023  face=0.816  hand=0.161
+  [308/409] Thank_you                      pose=0.015  face=0.777  hand=0.208
+  [309/409] Thursday                       pose=0.018  face=0.689  hand=0.293
+  [310/409] Tiger                          pose=0.024  face=0.860  hand=0.116
+  [311/409] Time                           pose=0.011  face=0.547  hand=0.442
+  [312/409] Today                          pose=0.016  face=0.659  hand=0.326
+  [313/409] Tomorrow                       pose=0.013  face=0.537  hand=0.450
+  [314/409] Tool                           pose=0.017  face=0.677  hand=0.307
+  [315/409] Train                          pose=0.016  face=0.639  hand=0.345
+  [316/409] Train_Station                  pose=0.015  face=0.531  hand=0.454
+  [317/409] Transportation                 pose=0.021  face=0.636  hand=0.343
+  [318/409] Truck                          pose=0.018  face=0.636  hand=0.345
+  [319/409] Tuesday                        pose=0.016  face=0.562  hand=0.422
+  [320/409] Turtle                         pose=0.022  face=0.924  hand=0.054
+  [321/409] UNDERSTAND                     pose=0.024  face=0.820  hand=0.156
+  [322/409] Ugly                           pose=0.015  face=0.634  hand=0.351
+  [323/409] Umbrella                       pose=0.025  face=0.917  hand=0.058
+  [324/409] Uncle                          pose=0.018  face=0.932  hand=0.050
+  [325/409] University                     pose=0.014  face=0.604  hand=0.383
+  [326/409] Vegetables                     pose=0.019  face=0.942  hand=0.040
+  [327/409] Volcano                        pose=0.024  face=0.931  hand=0.046
+  [328/409] WANT                           pose=0.024  face=0.936  hand=0.041
+  [329/409] WATER                          pose=0.024  face=0.772  hand=0.205
+  [330/409] WEAR                           pose=0.034  face=0.941  hand=0.025
+  [331/409] WELCOME                        pose=0.030  face=0.903  hand=0.066
+  [332/409] WHAT                           pose=0.017  face=0.771  hand=0.213
+  [333/409] WHERE                          pose=0.021  face=0.867  hand=0.113
+  [334/409] WHO                            pose=0.021  face=0.735  hand=0.244
+  [335/409] WORRY                          pose=0.013  face=0.663  hand=0.324
+  [336/409] Waiter                         pose=0.021  face=0.707  hand=0.272
+  [337/409] War                            pose=0.021  face=0.648  hand=0.331
+  [338/409] Wednesday                      pose=0.012  face=0.462  hand=0.527
+  [339/409] Week                           pose=0.011  face=0.431  hand=0.558
+  [340/409] White                          pose=0.012  face=0.509  hand=0.479
+  [341/409] Wife                           pose=0.016  face=0.810  hand=0.173
+  [342/409] Window                         pose=0.026  face=0.654  hand=0.320
+  [343/409] Winter                         pose=0.013  face=0.378  hand=0.609
+  [344/409] Woman                          pose=0.014  face=0.559  hand=0.426
+  [345/409] Writer                         pose=0.021  face=0.927  hand=0.052
+  [346/409] Wrong                          pose=0.019  face=0.915  hand=0.066
+  [347/409] Year                           pose=0.018  face=0.553  hand=0.428
+  [348/409] Yellow                         pose=0.019  face=0.653  hand=0.329
+  [349/409] Yesterday                      pose=0.017  face=0.599  hand=0.384
+  [350/409] alive                          pose=0.012  face=0.608  hand=0.379
+  [351/409] bad                            pose=0.012  face=0.538  hand=0.450
+  [352/409] big_large                      pose=0.023  face=0.512  hand=0.465
+  [353/409] cheap                          pose=0.017  face=0.723  hand=0.259
+  [354/409] clean                          pose=0.016  face=0.802  hand=0.181
+  [355/409] cold                           pose=0.020  face=0.584  hand=0.397
+  [356/409] cool                           pose=0.020  face=0.711  hand=0.268
+  [357/409] curved                         pose=0.031  face=0.670  hand=0.299
+  [358/409] dead                           pose=0.010  face=0.435  hand=0.554
+  [359/409] deep                           pose=0.028  face=0.637  hand=0.335
+  [360/409] dirty                          pose=0.014  face=0.629  hand=0.357
+  [361/409] dry                            pose=0.018  face=0.620  hand=0.362
+  [362/409] expensive                      pose=0.011  face=0.518  hand=0.471
+  [363/409] famous                         pose=0.027  face=0.732  hand=0.240
+  [364/409] fast                           pose=0.012  face=0.544  hand=0.444
+  [365/409] female                         pose=0.012  face=0.524  hand=0.464
+  [366/409] flat                           pose=0.011  face=0.376  hand=0.614
+  [367/409] good                           pose=0.013  face=0.599  hand=0.387
+  [368/409] happy                          pose=0.015  face=0.590  hand=0.395
+  [369/409] hard                           pose=0.011  face=0.505  hand=0.483
+  [370/409] he                             pose=0.021  face=0.733  hand=0.246
+  [371/409] healthy                        pose=0.019  face=0.635  hand=0.347
+  [372/409] heavy                          pose=0.012  face=0.404  hand=0.584
+  [373/409] high                           pose=0.039  face=0.607  hand=0.354
+  [374/409] hot                            pose=0.015  face=0.578  hand=0.407
+  [375/409] it                             pose=0.014  face=0.487  hand=0.499
+  [376/409] light                          pose=0.010  face=0.487  hand=0.502
+  [377/409] long                           pose=0.013  face=0.532  hand=0.455
+  [378/409] loose                          pose=0.014  face=0.639  hand=0.347
+  [379/409] loud                           pose=0.024  face=0.684  hand=0.291
+  [380/409] low                            pose=0.011  face=0.433  hand=0.557
+  [381/409] male                           pose=0.015  face=0.581  hand=0.404
+  [382/409] narrow                         pose=0.013  face=0.356  hand=0.631
+  [383/409] new                            pose=0.015  face=0.584  hand=0.401
+  [384/409] old                            pose=0.025  face=0.696  hand=0.280
+  [385/409] poor                           pose=0.028  face=0.539  hand=0.433
+  [386/409] quiet                          pose=0.017  face=0.720  hand=0.263
+  [387/409] rich                           pose=0.012  face=0.463  hand=0.525
+  [388/409] sad                            pose=0.008  face=0.434  hand=0.557
+  [389/409] shallow                        pose=0.023  face=0.695  hand=0.282
+  [390/409] she                            pose=0.018  face=0.699  hand=0.283
+  [391/409] short                          pose=0.021  face=0.633  hand=0.346
+  [392/409] sick                           pose=0.023  face=0.615  hand=0.362
+  [393/409] slow                           pose=0.014  face=0.591  hand=0.395
+  [394/409] small_little                   pose=0.021  face=0.644  hand=0.335
+  [395/409] soft                           pose=0.018  face=0.698  hand=0.284
+  [396/409] strong                         pose=0.012  face=0.310  hand=0.678
+  [397/409] tall                           pose=0.031  face=0.667  hand=0.302
+  [398/409] they                           pose=0.034  face=0.624  hand=0.341
+  [399/409] thick                          pose=0.021  face=0.721  hand=0.258
+  [400/409] thin                           pose=0.008  face=0.340  hand=0.652
+  [401/409] tight                          pose=0.020  face=0.628  hand=0.352
+  [402/409] train_ticket                   pose=0.014  face=0.604  hand=0.381
+  [403/409] warm                           pose=0.029  face=0.735  hand=0.236
+  [404/409] we                             pose=0.016  face=0.665  hand=0.318
+  [405/409] weak                           pose=0.019  face=0.615  hand=0.366
+  [406/409] wet                            pose=0.016  face=0.623  hand=0.360
+  [407/409] wide                           pose=0.026  face=0.446  hand=0.528
+  [408/409] you                            pose=0.015  face=0.710  hand=0.275
+  [409/409] young                          pose=0.013  face=0.584  hand=0.403
+
+============================================================
+[OK] DICTIONARY BUILT — 409 glosses
+  /mnt/ngan/vsl_sentence/data/attention_dictionary/dictionary.npy    ← training
+  /mnt/ngan/vsl_sentence/data/attention_dictionary/dictionary.json   ← inspect
+  /mnt/ngan/vsl_sentence/data/attention_dictionary/action_names.json ← index map
+============================================================
