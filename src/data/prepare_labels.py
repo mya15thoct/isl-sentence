@@ -106,9 +106,13 @@ GLOSS_MAP = {
 # Words to skip entirely (no reasonable mapping)
 SKIP_WORDS = {
     'ABOUT', 'ANY', 'GOT', 'HAIR', 'PLAN', 'CAREER',
-    'GLASS', 'SCHOOL', 'ONWARDS', 'NOW', 'MEDICINE', 'FINE',
+    'GLASS', 'ONWARDS', 'NOW', 'MEDICINE', 'FINE',
     'FEELING', 'THERE', 'TRY', 'MAKE', 'LET', 'SO', 'SIR',
 }
+
+# Force drop even if token IS in vocab
+# (e.g. SCHOOL is in vocab but redundant when COLLEGE → COLLEGE_SCHOOL)
+FORCE_DROP = {'SCHOOL'}
 
 
 def clean_gloss_token(token: str) -> str:
@@ -124,6 +128,10 @@ def map_gloss(token: str, vocab: set) -> str | None:
     token = clean_gloss_token(token)
 
     if not token:
+        return None
+
+    # Force drop — overrides vocab check
+    if token in FORCE_DROP:
         return None
 
     # Already in vocab → keep as-is
