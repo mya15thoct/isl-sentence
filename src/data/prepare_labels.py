@@ -87,32 +87,27 @@ GLOSS_MAP = {
 
     # Other mappings
     'CARE':      'TAKE_CARE',
-    'TAKE':      'TAKE_CARE',   # approximate — covers most cases
-    'TURN':      'TURN_ON',     # approximate
-    'NOW':       'COME',      # "NOW ONWARDS" → approximate
-    'ONWARDS':   'GO',        # approximate
+    'TAKE':      'TAKE_CARE',
+    'TURN':      'TURN_ON',
     'VERY':      'REALLY',
     'MUCH':      'A_LOT',
     'LOT':       'A_LOT',
-    'SO':        'REALLY',
     'MORE':      'A_LOT',
     'SOME':      'SOMETHING',
     'KNOW':      'UNDERSTAND',
-    'LET':       'GO',
-    'MAKE':      'DO',
     'NEED':      'WANT',
-    'WHEN':      'HOW',       # approximate (time question)
-    'WHY':       'HOW',       # approximate (question)
+    'WHEN':      'HOW',       # question word approximation
+    'WHY':       'HOW',       # question word approximation
     'WHICH':     'WHAT',
     'ONE':       'NUMBER',
-    'SIR':       'YOU',       # honorific → approximate
+    'THIS':      'THAT',
 }
 
-# Words to skip entirely (no reasonable mapping, very rare in ISL)
+# Words to skip entirely (no reasonable mapping)
 SKIP_WORDS = {
     'ABOUT', 'ANY', 'GOT', 'HAIR', 'PLAN', 'CAREER',
-    'GLASS', 'WAY', 'ONWARDS', 'MEDICINE', 'FINE',
-    'FEELING', 'THERE', 'TRY',   # TRY has no close ISL equivalent
+    'GLASS', 'WAY', 'ONWARDS', 'NOW', 'MEDICINE', 'FINE',
+    'FEELING', 'THERE', 'TRY', 'MAKE', 'LET', 'SO', 'SIR',
 }
 
 
@@ -185,6 +180,7 @@ def prepare_labels(
 
             mapped = []
             row_oov = []
+            seen = set()  # dedup: avoid duplicate consecutive tokens from mapping
             for token in raw_glosses:
                 result = map_gloss(token, vocab)
                 if result is None:
@@ -192,9 +188,18 @@ def prepare_labels(
                 elif result.startswith('__OOV__'):
                     oov_word = result[7:]
                     row_oov.append(oov_word)
-                    # still include as dropped
                 else:
-                    mapped.append(result)
+                    # Avoid duplicate tokens introduced by mapping
+                    # e.g. TAKE+CARE both → TAKE_CARE → keep only first
+                    if result not in seen:
+                        mapped.append(result)
+                        seen.add(result)
+                    # Reset seen after non-duplicate to allow legitimate repetition
+                    # (e.g. WORRY WORRY in "no need to worry dont worry")
+                    elif result == (mapped[-1] if mapped else None):
+                        pass  # skip consecutive duplicate
+                    else:
+                        mapped.append(result)
 
             if row_oov:
                 oov_report[sentence] = row_oov
