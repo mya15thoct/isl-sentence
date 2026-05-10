@@ -114,9 +114,6 @@ SKIP_WORDS = {
 # (e.g. SCHOOL is in vocab but redundant when COLLEGE → COLLEGE_SCHOOL)
 FORCE_DROP = {'SCHOOL'}
 
-# Minimum number of glosses required to keep a sentence
-MIN_GLOSSES = 3
-
 
 def clean_gloss_token(token: str) -> str:
     """Remove trailing punctuation from a gloss token."""
@@ -215,7 +212,7 @@ def prepare_labels(
             if row_oov:
                 oov_report[sentence] = row_oov
 
-            if not mapped or len(mapped) < MIN_GLOSSES:
+            if not mapped:
                 skipped.append((sentence, mapped))
                 continue
 
