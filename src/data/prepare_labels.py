@@ -87,6 +87,8 @@ GLOSS_MAP = {
 
     # Other mappings
     'CARE':      'TAKE_CARE',
+    'TAKE':      'TAKE_CARE',   # approximate — covers most cases
+    'TURN':      'TURN_ON',     # approximate
     'NOW':       'COME',      # "NOW ONWARDS" → approximate
     'ONWARDS':   'GO',        # approximate
     'VERY':      'REALLY',
@@ -110,7 +112,7 @@ GLOSS_MAP = {
 SKIP_WORDS = {
     'ABOUT', 'ANY', 'GOT', 'HAIR', 'PLAN', 'CAREER',
     'GLASS', 'WAY', 'ONWARDS', 'MEDICINE', 'FINE',
-    'FEELING', 'THERE', 'THIS', 'THAT',   # THAT is in vocab, check below
+    'FEELING', 'THERE', 'TRY',   # TRY has no close ISL equivalent
 }
 
 
