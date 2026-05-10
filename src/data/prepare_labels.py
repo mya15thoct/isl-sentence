@@ -71,7 +71,6 @@ GLOSS_MAP = {
     'HI':        'HELLO_HI',
     'HELLO':     'HELLO_HI',
     'COLLEGE':   'COLLEGE_SCHOOL',
-    'SCHOOL':    'COLLEGE_SCHOOL',
 
     # Verb forms → root
     'COMING':    'COME',
@@ -96,6 +95,7 @@ GLOSS_MAP = {
     'SOME':      'SOMETHING',
     'KNOW':      'UNDERSTAND',
     'NEED':      'WANT',
+    'WAY':       'GO',        # "on the way" → GO (preserves movement meaning)
     'WHEN':      'HOW',       # question word approximation
     'WHY':       'HOW',       # question word approximation
     'WHICH':     'WHAT',
@@ -106,7 +106,7 @@ GLOSS_MAP = {
 # Words to skip entirely (no reasonable mapping)
 SKIP_WORDS = {
     'ABOUT', 'ANY', 'GOT', 'HAIR', 'PLAN', 'CAREER',
-    'GLASS', 'WAY', 'ONWARDS', 'NOW', 'MEDICINE', 'FINE',
+    'GLASS', 'SCHOOL', 'ONWARDS', 'NOW', 'MEDICINE', 'FINE',
     'FEELING', 'THERE', 'TRY', 'MAKE', 'LET', 'SO', 'SIR',
 }
 
