@@ -229,7 +229,7 @@ def prepare_labels(
     print(f'{"=" * 60}')
     print(f'  Total sentences in CSV   : {len(labels) + len(skipped)}')
     print(f'  Sentences with labels    : {len(labels)}')
-    print(f'  Sentences skipped (< {MIN_GLOSSES} glosses): {len(skipped)}')
+    print(f'  Sentences skipped (empty): {len(skipped)}')
     if skipped:
         for sent, gl in skipped:
             print(f'    "{sent}" → {gl}')
