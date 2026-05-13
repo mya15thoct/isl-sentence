@@ -164,7 +164,8 @@ def greedy_decode(logits_batch: np.ndarray, input_lengths: np.ndarray) -> list[l
     """
     results = []
     for logits, T in zip(logits_batch, input_lengths):
-        indices = np.argmax(logits[:T], axis=-1)      # (T,)
+        probs   = np.exp(logits[:T]) / np.sum(np.exp(logits[:T]), axis=-1, keepdims=True)
+        indices = np.argmax(probs, axis=-1)               # (T,)
         # Collapse repeats
         collapsed = [indices[0]]
         for idx in indices[1:]:
