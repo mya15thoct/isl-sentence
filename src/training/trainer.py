@@ -191,7 +191,6 @@ def sequence_accuracy(preds: list, labels_batch: np.ndarray, label_lengths: np.n
 # TRAINING STEP
 # ─────────────────────────────────────────────────────────────────────────────
 
-@tf.function
 def train_step(model, optimizer, batch, att_dict_tf, idx2gloss_list, alpha):
     X         = tf.cast(batch['inputs'],        tf.float32)
     labels    = tf.cast(batch['labels'],        tf.int32)
