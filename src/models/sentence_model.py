@@ -120,9 +120,12 @@ def _build_encoder(num_glosses: int) -> Model:
     x = layers.Dropout(0.3)(x)
 
     # === CTC OUTPUT HEAD ===
-    # num_glosses + 1: index 0..num_glosses-1 = glosses, index num_glosses = blank
-    # Output softmax probabilities for tf.keras.backend.ctc_batch_cost
-    x = layers.Dense(num_glosses + 1, activation='linear', name='ctc_logits')(x)
+    # LayerNorm: normalize pre-trained LSTM features before the randomly-init
+    # Dense head to prevent softmax collapse (extreme logits → CTC loss ~600)
+    x = layers.LayerNormalization(name='ctc_ln')(x)
+    x = layers.Dense(num_glosses + 1, activation='linear',
+                     kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.01),
+                     name='ctc_logits')(x)
     outputs = layers.Softmax(name='ctc_out')(x)
 
     return Model(inputs=inputs, outputs=outputs, name='SentenceModel_CTC')
