@@ -32,6 +32,31 @@ def _sentence_to_folder(sentence: str) -> str:
     return sentence.strip().lower().replace(' ', '_')
 
 
+def _find_folder(seq_dir: Path, sentence: str) -> Path | None:
+    """
+    Find the sequence folder for a sentence, case-insensitive.
+    Handles variations like:
+      - 'He_is_going...' vs 'he_is_going...'
+      - 'which_collegeschool...' vs 'which_college_school...'
+    """
+    target = _sentence_to_folder(sentence)
+
+    # Exact match first
+    if (seq_dir / target).exists():
+        return seq_dir / target
+
+    # Case-insensitive + normalize (remove all underscores for comparison)
+    target_norm = target.replace('_', '')
+    for folder in seq_dir.iterdir():
+        if not folder.is_dir():
+            continue
+        folder_norm = folder.name.lower().replace('_', '')
+        if folder_norm == target_norm:
+            return folder
+
+    return None
+
+
 def load_vocab(vocab_path: str) -> dict:
     """
     Load action_mapping_combined.json and build gloss→index map.
@@ -78,10 +103,9 @@ def load_samples(
     ctc_violations  = []
 
     for sentence, glosses in labels.items():
-        folder_name = _sentence_to_folder(sentence)
-        folder_path = seq_dir / folder_name
+        folder_path = _find_folder(seq_dir, sentence)
 
-        if not folder_path.exists():
+        if folder_path is None:
             missing_folders.append(sentence)
             continue
 
