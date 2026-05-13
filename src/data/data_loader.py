@@ -71,8 +71,8 @@ def load_vocab(vocab_path: str) -> dict:
     # Sort by original index to preserve ordering
     sorted_glosses = [v for _, v in sorted(mapping.items(), key=lambda x: int(x[0]))]
 
-    # Blank = 0, glosses = 1..N
-    gloss2idx = {g.upper(): i + 1 for i, g in enumerate(sorted_glosses)}
+    # 0-indexed: glosses = 0..N-1, blank is at index N (handled by ctc_batch_cost)
+    gloss2idx = {g.upper(): i for i, g in enumerate(sorted_glosses)}
     return gloss2idx
 
 

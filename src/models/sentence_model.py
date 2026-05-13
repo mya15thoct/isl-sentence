@@ -8,7 +8,7 @@ Architecture:
   - Adds Dense(num_glosses+1) CTC output head per frame
 
 Input:  (batch, T, 1662)   ← variable T per sentence video
-Output: (batch, T, num_glosses+1)  ← RAW LOGITS for CTC (no softmax)
+Output: (batch, T, num_glosses+1)  ← softmax probabilities for ctc_batch_cost
 
 Usage:
   model = build_sentence_model(
@@ -120,9 +120,10 @@ def _build_encoder(num_glosses: int) -> Model:
     x = layers.Dropout(0.3)(x)
 
     # === CTC OUTPUT HEAD ===
-    # num_glosses + 1: index 0 reserved for CTC blank token
-    # Output raw logits — tf.nn.ctc_loss applies log_softmax internally
-    outputs = layers.Dense(num_glosses + 1, activation='linear', name='ctc_logits')(x)
+    # num_glosses + 1: index 0..num_glosses-1 = glosses, index num_glosses = blank
+    # Output softmax probabilities for tf.keras.backend.ctc_batch_cost
+    x = layers.Dense(num_glosses + 1, activation='linear', name='ctc_logits')(x)
+    outputs = layers.Softmax(name='ctc_out')(x)
 
     return Model(inputs=inputs, outputs=outputs, name='SentenceModel_CTC')
 

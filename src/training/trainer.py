@@ -29,34 +29,27 @@ from models.sentence_model import build_sentence_model
 # CTC LOSS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def ctc_loss_fn(labels, logits, input_lengths, label_lengths):
+def ctc_loss_fn(labels, y_pred, input_lengths, label_lengths):
     """
-    Compute CTC loss for a batch.
+    Compute CTC loss using tf.keras.backend.ctc_batch_cost.
 
     Args:
-        labels:        (B, L_max)   padded gloss indices (1-indexed, 0=pad)
-        logits:        (B, T, C)    per-frame log probabilities from model
+        labels:        (B, L_max)   padded gloss indices (0-indexed, blank at num_classes-1)
+        y_pred:        (B, T, C)    softmax probabilities from model
         input_lengths: (B,)         actual frame counts
         label_lengths: (B,)         actual label lengths
 
     Returns:
         Scalar mean CTC loss
     """
-    # tf.nn.ctc_loss expects:
-    #   labels:  SparseTensor or (B, L)
-    #   logits:  (T, B, C)  time-major
-    #   label_length: (B,)
-    #   logit_length: (B,)
-    logits_time_major = tf.transpose(logits, [1, 0, 2])   # (T, B, C)
+    import tensorflow.keras.backend as K
 
-    loss = tf.nn.ctc_loss(
-        labels          = tf.cast(labels, tf.int32),
-        logits          = logits_time_major,
-        label_length    = tf.cast(label_lengths, tf.int32),
-        logit_length    = tf.cast(input_lengths, tf.int32),
-        logits_time_major = True,
-        blank_index     = 0,          # index 0 = CTC blank token
-    )
+    y_true      = tf.cast(labels,        tf.float32)
+    y_pred_     = tf.cast(y_pred,        tf.float32)
+    in_lens     = tf.cast(tf.reshape(input_lengths,  (-1, 1)), tf.int32)
+    lbl_lens    = tf.cast(tf.reshape(label_lengths, (-1, 1)), tf.int32)
+
+    loss = K.ctc_batch_cost(y_true, y_pred_, in_lens, lbl_lens)
     return tf.reduce_mean(loss)
 
 
@@ -156,23 +149,23 @@ def distillation_loss_fn(
 # GREEDY CTC DECODE  (for validation accuracy)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def greedy_decode(logits_batch: np.ndarray, input_lengths: np.ndarray) -> list[list[int]]:
+def greedy_decode(probs_batch: np.ndarray, input_lengths: np.ndarray) -> list[list[int]]:
     """
     Greedy CTC decode: argmax per frame → collapse repeats → remove blank.
 
     Returns list of decoded label sequences (as index lists).
     """
+    blank_idx = probs_batch.shape[-1] - 1   # blank at last index (num_classes-1)
     results = []
-    for logits, T in zip(logits_batch, input_lengths):
-        probs   = np.exp(logits[:T]) / np.sum(np.exp(logits[:T]), axis=-1, keepdims=True)
-        indices = np.argmax(probs, axis=-1)               # (T,)
+    for probs, T in zip(probs_batch, input_lengths):
+        indices = np.argmax(probs[:T], axis=-1)               # (T,)
         # Collapse repeats
         collapsed = [indices[0]]
         for idx in indices[1:]:
             if idx != collapsed[-1]:
                 collapsed.append(idx)
         # Remove blank (index 0)
-        decoded = [i for i in collapsed if i != 0]
+        decoded = [i for i in collapsed if i != blank_idx]
         results.append(decoded)
     return results
 
