@@ -151,6 +151,7 @@ class SlidingWindowRecognizer:
         self.window_size = window_size
         self.stride = stride
         self.confidence_threshold = confidence_threshold
+        self._debug_count = 0  # tracks how many samples have been debug-printed
 
     def extract_windows(self, keypoints: np.ndarray) -> list[np.ndarray]:
         """
@@ -188,7 +189,9 @@ class SlidingWindowRecognizer:
             start = (T - self.seq_len) // 2
             return window[start:start + self.seq_len]
 
-    def classify_windows(self, windows: list[np.ndarray]) -> list[tuple[int, float, str]]:
+    def classify_windows(
+        self, windows: list[np.ndarray], debug: bool = False,
+    ) -> list[tuple[int, float, str]]:
         """
         Classify each window with word model in a single batch.
 
@@ -201,11 +204,26 @@ class SlidingWindowRecognizer:
         probs = self.model.predict(batch, verbose=0)  # (N, num_classes)
 
         results = []
-        for p in probs:
+        for i, p in enumerate(probs):
             idx = int(np.argmax(p))
             conf = float(p[idx])
             gloss = self.idx2gloss.get(idx, f'UNK_{idx}')
             results.append((idx, conf, gloss))
+
+        # Debug: print confidence stats + top-3 for first few samples
+        if debug and self._debug_count < 3:
+            confs = [r[1] for r in results]
+            top3_per_window = []
+            for p in probs[:3]:  # first 3 windows
+                top3_idx = np.argsort(p)[-3:][::-1]
+                top3 = [(self.idx2gloss.get(int(j), '?'), f'{p[j]:.4f}') for j in top3_idx]
+                top3_per_window.append(top3)
+            print(f'    [DEBUG] {len(windows)} windows | '
+                  f'conf: min={min(confs):.4f} max={max(confs):.4f} mean={np.mean(confs):.4f}')
+            for wi, t3 in enumerate(top3_per_window):
+                print(f'    [DEBUG] window[{wi}] top-3: {t3}')
+            self._debug_count += 1
+
         return results
 
     def post_process(
@@ -237,7 +255,7 @@ class SlidingWindowRecognizer:
         # 3. Remove blanks
         return [g for g in merged if g != '__BLANK__']
 
-    def recognize(self, keypoints: np.ndarray) -> dict:
+    def recognize(self, keypoints: np.ndarray, debug: bool = False) -> dict:
         """
         Full pipeline: (T, 1662) keypoints → gloss sequence.
 
@@ -247,7 +265,7 @@ class SlidingWindowRecognizer:
           num_windows:      int
         """
         windows = self.extract_windows(keypoints)
-        raw_preds = self.classify_windows(windows)
+        raw_preds = self.classify_windows(windows, debug=debug)
         glosses = self.post_process(raw_preds)
 
         return {
@@ -284,6 +302,7 @@ def evaluate_on_dataset(
     seq_dir: str,
     label_path: str,
     verbose: bool = True,
+    debug: bool = False,
 ) -> dict:
     """
     Evaluate sliding window recognizer on the full sentence dataset.
@@ -319,7 +338,7 @@ def evaluate_on_dataset(
 
         for npy_file in sorted(folder.glob('*.npy')):
             keypoints = np.load(npy_file)
-            result = recognizer.recognize(keypoints)
+            result = recognizer.recognize(keypoints, debug=debug)
             pred = result['glosses']
 
             edits = _levenshtein(gt_upper, pred)
@@ -531,9 +550,11 @@ if __name__ == '__main__':
     parser.add_argument('--action_mapping', default=str(ACTION_MAPPING_PATH))
     parser.add_argument('--window_size', type=int,   default=30)
     parser.add_argument('--stride',      type=int,   default=5)
-    parser.add_argument('--threshold',   type=float, default=0.4)
+    parser.add_argument('--threshold',   type=float, default=0.1)
     parser.add_argument('--grid_search', action='store_true',
                         help='Run grid search over hyperparameters')
+    parser.add_argument('--debug', action='store_true',
+                        help='Print raw confidence stats for first 3 samples')
     parser.add_argument('--save_results', type=str,  default=None,
                         help='Path to save results JSON')
     args = parser.parse_args()
@@ -572,6 +593,7 @@ if __name__ == '__main__':
             recognizer,
             seq_dir=args.seq_dir,
             label_path=args.label_path,
+            debug=args.debug,
         )
 
         if args.save_results:
