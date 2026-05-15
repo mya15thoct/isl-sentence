@@ -76,6 +76,33 @@ def load_vocab(vocab_path: str) -> dict:
     return gloss2idx
 
 
+def load_active_vocab(vocab_path: str, label_path: str) -> dict:
+    """
+    Load vocab filtered to only glosses appearing in sentence labels.
+    Re-indexes from 0..N-1, drastically reducing CTC search space.
+
+    With 99 sentences using ~80 unique glosses, this shrinks the output
+    from 410 (409+blank) to ~81 (80+blank), making CTC 5× easier.
+    """
+    full_gloss2idx = load_vocab(vocab_path)
+
+    with open(label_path, encoding='utf-8') as f:
+        labels = json.load(f)
+
+    active = set()
+    for glosses in labels.values():
+        for g in glosses:
+            if g.upper() in full_gloss2idx:
+                active.add(g.upper())
+
+    active_sorted = sorted(active)
+    gloss2idx = {g: i for i, g in enumerate(active_sorted)}
+
+    print(f'[DataLoader] Active vocab: {len(gloss2idx)} glosses '
+          f'(reduced from {len(full_gloss2idx)})')
+    return gloss2idx
+
+
 def load_samples(
     seq_dir:    str,
     label_path: str,
@@ -146,30 +173,100 @@ def load_samples(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DATA AUGMENTATION (keypoint-level)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def augment_keypoints(
+    seq: np.ndarray,
+    rng: np.random.Generator = None,
+) -> np.ndarray:
+    """
+    Apply random augmentation to a keypoint sequence (T, 1662).
+
+    Augmentations (each applied with probability ~50-70%):
+      1. Gaussian noise          — simulate sensor jitter
+      2. Random scale            — simulate distance variation
+      3. Speed perturbation      — simulate signing speed variation
+      4. Frame dropout           — simulate occlusion
+      5. Random coordinate shift — simulate camera shift
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+
+    aug = seq.copy()
+
+    # 1. Gaussian noise (σ=0.005)
+    if rng.random() > 0.3:
+        aug += rng.normal(0, 0.005, aug.shape).astype(np.float32)
+
+    # 2. Random scale (0.9–1.1)
+    if rng.random() > 0.5:
+        scale = rng.uniform(0.9, 1.1)
+        aug *= scale
+
+    # 3. Speed perturbation (0.8–1.2× temporal stretch)
+    if rng.random() > 0.3:
+        factor = rng.uniform(0.8, 1.2)
+        T = aug.shape[0]
+        new_T = max(1, int(T * factor))
+        indices = np.linspace(0, T - 1, new_T).astype(int)
+        aug = aug[indices]
+
+    # 4. Frame dropout (zero out 5–15% of frames)
+    if rng.random() > 0.5:
+        T = aug.shape[0]
+        n_drop = rng.integers(1, max(2, int(T * 0.15)))
+        drop_idx = rng.choice(T, n_drop, replace=False)
+        aug[drop_idx] = 0.0
+
+    # 5. Random coordinate shift
+    if rng.random() > 0.5:
+        shift = rng.uniform(-0.02, 0.02, (1, 1662)).astype(np.float32)
+        aug += shift
+
+    return aug.astype(np.float32)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # TENSORFLOW DATASET
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _pad_sequences(batch: list[dict]) -> tuple:
+def _pad_sequences(batch: list[dict], augment: bool = False) -> tuple:
     """
     Pad a batch of variable-length sequences to the same T.
+    Optionally applies keypoint augmentation (for training).
     Returns tensors compatible with CTC loss.
     """
-    max_T     = max(s['T'] for s in batch)
-    max_L     = max(s['label_len'] for s in batch)
-    B         = len(batch)
+    rng = np.random.default_rng() if augment else None
+
+    # Load arrays (and optionally augment — may change T)
+    arrays = []
+    for s in batch:
+        arr = np.load(s['path'])
+        if augment:
+            arr = augment_keypoints(arr, rng)
+        arrays.append(arr)
+
+    max_T  = max(a.shape[0] for a in arrays)
+    max_L  = max(s['label_len'] for s in batch)
+    B      = len(batch)
 
     X          = np.zeros((B, max_T, 1662), dtype=np.float32)
     y          = np.zeros((B, max_L),       dtype=np.int32)
     in_lens    = np.zeros((B,),             dtype=np.int32)
     label_lens = np.zeros((B,),             dtype=np.int32)
 
-    for i, s in enumerate(batch):
-        arr = np.load(s['path'])
-        T   = s['T']
-        X[i, :T, :]                    = arr
-        y[i, :s['label_len']]          = s['label']
-        in_lens[i]                     = T
-        label_lens[i]                  = s['label_len']
+    for i, (s, arr) in enumerate(zip(batch, arrays)):
+        T = arr.shape[0]
+        # CTC constraint: input_length >= label_length
+        if T < s['label_len']:
+            indices = np.linspace(0, T - 1, s['label_len']).astype(int)
+            arr = arr[indices]
+            T = arr.shape[0]
+        X[i, :T, :]           = arr
+        y[i, :s['label_len']] = s['label']
+        in_lens[i]            = T
+        label_lens[i]         = s['label_len']
 
     return X, y, in_lens, label_lens
 
@@ -183,32 +280,40 @@ class SentenceDataGenerator(tf.keras.utils.Sequence):
       labels  : (B, L_max)         padded label indices
       in_lens : (B,)               actual frame counts
       lbl_lens: (B,)               actual label lengths
+
+    When augment=True, keypoint-level augmentation is applied on-the-fly.
+    augment_factor > 1 repeats each sample N times per epoch (different
+    random augmentation each time), effectively multiplying dataset size.
     """
 
     def __init__(
         self,
-        samples:    list[dict],
-        batch_size: int  = 8,
-        shuffle:    bool = True,
+        samples:         list[dict],
+        batch_size:      int  = 8,
+        shuffle:         bool = True,
+        augment:         bool = False,
+        augment_factor:  int  = 1,
     ):
         self.samples    = samples
         self.batch_size = batch_size
         self.shuffle    = shuffle
-        self.indices    = np.arange(len(samples))
+        self.augment    = augment
+        # Tile indices to see each sample augment_factor times per epoch
+        base = np.arange(len(samples))
+        self.indices = np.tile(base, max(1, augment_factor))
         if shuffle:
             np.random.shuffle(self.indices)
 
     def __len__(self):
-        return max(1, len(self.samples) // self.batch_size)
+        return max(1, len(self.indices) // self.batch_size)
 
     def __getitem__(self, idx):
         batch_idx = self.indices[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch     = [self.samples[i] for i in batch_idx]
-        X, y, in_lens, lbl_lens = _pad_sequences(batch)
-        # Return as dict for custom CTC training step
+        X, y, in_lens, lbl_lens = _pad_sequences(batch, augment=self.augment)
         return {
-            'inputs':       X,
-            'labels':       y,
+            'inputs':         X,
+            'labels':         y,
             'input_lengths':  in_lens,
             'label_lengths':  lbl_lens,
         }
@@ -223,15 +328,21 @@ class SentenceDataGenerator(tf.keras.utils.Sequence):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_datasets(
-    seq_dir:    str  = None,
-    label_path: str  = None,
-    vocab_path: str  = None,
-    batch_size: int  = 8,
-    val_split:  float = 0.15,
-    seed:       int  = 42,
+    seq_dir:        str   = None,
+    label_path:     str   = None,
+    vocab_path:     str   = None,
+    batch_size:     int   = 8,
+    val_split:      float = 0.15,
+    seed:           int   = 42,
+    active_only:    bool  = False,
+    augment_factor: int   = 0,
 ):
     """
     Build train/val data generators and return metadata.
+
+    Args:
+        active_only:    If True, reduce vocab to only glosses in labels (~80 vs 409)
+        augment_factor: Multiply training data N× with random augmentation (0=off)
 
     Returns:
         train_gen : SentenceDataGenerator
@@ -242,8 +353,13 @@ def build_datasets(
     label_path = label_path or str(ISL_SEQ_DIR / 'labels.json')
     vocab_path = vocab_path or str(ACTION_MAPPING_PATH)
 
-    gloss2idx = load_vocab(vocab_path)
-    samples   = load_samples(seq_dir, label_path, gloss2idx)
+    # Vocab: full (409) or active-only (~80)
+    if active_only:
+        gloss2idx = load_active_vocab(vocab_path, label_path)
+    else:
+        gloss2idx = load_vocab(vocab_path)
+
+    samples = load_samples(seq_dir, label_path, gloss2idx)
 
     # Reproducible split
     rng = np.random.default_rng(seed)
@@ -253,18 +369,30 @@ def build_datasets(
     val_s   = samples[:n_val]
     train_s = samples[n_val:]
 
-    print(f'[DataLoader] Train: {len(train_s)}  |  Val: {len(val_s)}')
+    aug = max(1, augment_factor) if augment_factor > 0 else 1
+    effective = len(train_s) * aug
+    print(f'[DataLoader] Train: {len(train_s)} (×{aug}={effective})  |  Val: {len(val_s)}')
+    print(f'[DataLoader] Vocab: {len(gloss2idx)} glosses  |  '
+          f'CTC output: {len(gloss2idx) + 1} (+ blank)')
 
-    train_gen = SentenceDataGenerator(train_s, batch_size=batch_size, shuffle=True)
-    val_gen   = SentenceDataGenerator(val_s,   batch_size=batch_size, shuffle=False)
+    train_gen = SentenceDataGenerator(
+        train_s, batch_size=batch_size, shuffle=True,
+        augment=(augment_factor > 0), augment_factor=aug,
+    )
+    val_gen = SentenceDataGenerator(
+        val_s, batch_size=batch_size, shuffle=False,
+        augment=False, augment_factor=1,
+    )
 
     meta = {
-        'gloss2idx':   gloss2idx,
-        'idx2gloss':   {v: k for k, v in gloss2idx.items()},
-        'num_glosses': len(gloss2idx),   # excludes blank
-        'num_train':   len(train_s),
-        'num_val':     len(val_s),
-        'batch_size':  batch_size,
+        'gloss2idx':      gloss2idx,
+        'idx2gloss':      {v: k for k, v in gloss2idx.items()},
+        'num_glosses':    len(gloss2idx),
+        'num_train':      len(train_s),
+        'num_val':        len(val_s),
+        'batch_size':     batch_size,
+        'augment_factor': aug,
+        'active_only':    active_only,
     }
 
     return train_gen, val_gen, meta

@@ -270,12 +270,14 @@ def train_step(model, optimizer, batch, att_dict_tf, idx2gloss_list, alpha):
 def train(args):
     # ── Datasets ──────────────────────────────────────────────────────────────
     train_gen, val_gen, meta = build_datasets(
-        seq_dir    = args.seq_dir,
-        label_path = args.label_path,
-        vocab_path = args.vocab_path,
-        batch_size = args.batch_size,
-        val_split  = args.val_split,
-        seed       = args.seed,
+        seq_dir        = args.seq_dir,
+        label_path     = args.label_path,
+        vocab_path     = args.vocab_path,
+        batch_size     = args.batch_size,
+        val_split      = args.val_split,
+        seed           = args.seed,
+        active_only    = args.active_vocab,
+        augment_factor = args.augment_factor,
     )
     idx2gloss = meta['idx2gloss']
 
