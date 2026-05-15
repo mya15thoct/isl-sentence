@@ -180,6 +180,66 @@ def sequence_accuracy(preds: list, labels_batch: np.ndarray, label_lengths: np.n
     return correct / len(preds)
 
 
+def _levenshtein_distance(ref: list, hyp: list) -> int:
+    """Compute Levenshtein (edit) distance between two sequences."""
+    n, m = len(ref), len(hyp)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n + 1):
+        dp[i][0] = i
+    for j in range(m + 1):
+        dp[0][j] = j
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            cost = 0 if ref[i - 1] == hyp[j - 1] else 1
+            dp[i][j] = min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + cost,
+            )
+    return dp[n][m]
+
+
+def word_error_rate(preds: list, labels_batch: np.ndarray, label_lengths: np.ndarray) -> float:
+    """
+    Word Error Rate (WER) = sum(edit_distances) / sum(reference_lengths).
+    Lower is better: 0.0 = perfect, 1.0 = 100% errors.
+    """
+    total_edits = 0
+    total_ref_len = 0
+    for pred, label, L in zip(preds, labels_batch, label_lengths):
+        gt = [int(x) for x in label[:L]]
+        pred_int = [int(x) for x in pred]
+        total_edits += _levenshtein_distance(gt, pred_int)
+        total_ref_len += max(len(gt), 1)
+    return total_edits / max(total_ref_len, 1)
+
+
+def beam_search_decode(
+    probs_batch: np.ndarray,
+    input_lengths: np.ndarray,
+    beam_width: int = 10,
+) -> list[list[int]]:
+    """
+    CTC beam search decode using TensorFlow's built-in decoder.
+    Often recovers 10-20% accuracy compared to greedy decode.
+    """
+    probs_tf = tf.cast(probs_batch, tf.float32)
+    log_probs = tf.math.log(tf.clip_by_value(probs_tf, 1e-10, 1.0))
+    log_probs_t = tf.transpose(log_probs, [1, 0, 2])  # (T, B, C)
+    seq_lens = tf.cast(input_lengths, tf.int32)
+
+    decoded, _ = tf.nn.ctc_beam_search_decoder(
+        log_probs_t, seq_lens, beam_width=beam_width, top_paths=1,
+    )
+
+    sparse = decoded[0]
+    B = probs_batch.shape[0]
+    results = [[] for _ in range(B)]
+    for idx, val in zip(sparse.indices.numpy(), sparse.values.numpy()):
+        results[int(idx[0])].append(int(val))
+    return results
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # TRAINING STEP
 # ─────────────────────────────────────────────────────────────────────────────
@@ -250,7 +310,7 @@ def train(args):
     print(f'  Checkpoint    : {ckpt_dir}')
     print(f'{"="*60}\n')
 
-    history = {'train_loss': [], 'val_loss': [], 'val_acc': []}
+    history = {'train_loss': [], 'val_loss': [], 'val_acc': [], 'val_wer': []}
 
     for epoch in range(1, args.epochs + 1):
         # ── Train ──────────────────────────────────────────────────────────────
@@ -272,7 +332,7 @@ def train(args):
         mean_train = np.mean(train_losses)
 
         # ── Validation ─────────────────────────────────────────────────────────
-        val_losses, val_accs = [], []
+        val_losses, val_accs, val_wers = [], [], []
         for step in range(len(val_gen)):
             batch    = val_gen[step]
             X        = tf.cast(batch['inputs'],        tf.float32)
@@ -285,19 +345,28 @@ def train(args):
                 tf.cast(labels, tf.int32), logits,
                 tf.cast(in_lens, tf.int32), tf.cast(lbl_lens, tf.int32),
             )
-            preds  = greedy_decode(logits.numpy(), in_lens)
+            # Beam search decode (better than greedy)
+            if args.beam_width > 1:
+                preds = beam_search_decode(logits.numpy(), in_lens, args.beam_width)
+            else:
+                preds = greedy_decode(logits.numpy(), in_lens)
             v_acc  = sequence_accuracy(preds, labels, lbl_lens)
+            v_wer  = word_error_rate(preds, labels, lbl_lens)
             val_losses.append(float(v_loss))
             val_accs.append(v_acc)
+            val_wers.append(v_wer)
 
         mean_val  = np.mean(val_losses)
         mean_acc  = np.mean(val_accs)
+        mean_wer  = np.mean(val_wers)
         history['train_loss'].append(mean_train)
         history['val_loss'].append(mean_val)
         history['val_acc'].append(mean_acc)
+        history['val_wer'].append(mean_wer)
 
         print(f'\nEpoch {epoch:03d}  '
-              f'train={mean_train:.4f}  val={mean_val:.4f}  acc={mean_acc:.3f}')
+              f'train={mean_train:.4f}  val={mean_val:.4f}  '
+              f'acc={mean_acc:.3f}  WER={mean_wer:.3f}')
 
         # ── Checkpoint ─────────────────────────────────────────────────────────
         if mean_val < best_val_loss:
@@ -339,6 +408,12 @@ if __name__ == '__main__':
     parser.add_argument('--distill_alpha', type=float, default=0.1)
     parser.add_argument('--patience',   type=int,   default=10)
     parser.add_argument('--seed',       type=int,   default=42)
+    parser.add_argument('--beam_width', type=int,   default=10,
+                        help='Beam width for CTC decode (1=greedy)')
+    parser.add_argument('--active_vocab', action='store_true',
+                        help='Reduce vocab to only glosses in labels (~80 vs 409)')
+    parser.add_argument('--augment_factor', type=int, default=0,
+                        help='Augmentation factor (0=off, 10=10x data)')
     parser.add_argument('--freeze_encoder', action='store_true',
                         help='Freeze encoder, only train CTC head')
     args = parser.parse_args()
