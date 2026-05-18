@@ -60,9 +60,46 @@ def mediapipe_detection(frame, holistic):
     return cv2.cvtColor(image, cv2.COLOR_RGB2BGR), results
 
 
+def _normalize_keypoints(pose, face, lh, rh):
+    """
+    Normalize keypoints relative to shoulder midpoint and shoulder width.
+    Identical to vsl-recognition/src/utils/extraction.py — must stay in sync
+    so that sentence keypoints are in the same distribution as word model training data.
+
+    Left shoulder  = pose landmark 11 → pose[44:48]
+    Right shoulder = pose landmark 12 → pose[48:52]
+    """
+    left_x,  left_y  = pose[44], pose[45]
+    right_x, right_y = pose[48], pose[49]
+
+    if left_x == 0.0 and right_x == 0.0:
+        return pose, face, lh, rh
+
+    center_x = (left_x + right_x) / 2.0
+    center_y = (left_y + right_y) / 2.0
+    shoulder_width = np.sqrt((right_x - left_x) ** 2 + (right_y - left_y) ** 2)
+    scale = shoulder_width if shoulder_width > 1e-6 else 1.0
+
+    def _norm_xy(arr, stride):
+        arr = arr.copy()
+        arr[0::stride] = (arr[0::stride] - center_x) / scale
+        arr[1::stride] = (arr[1::stride] - center_y) / scale
+        return arr
+
+    return (
+        _norm_xy(pose, stride=4),
+        _norm_xy(face, stride=3),
+        _norm_xy(lh,   stride=3),
+        _norm_xy(rh,   stride=3),
+    )
+
+
 def extract_keypoints(results) -> np.ndarray:
     """
-    Flatten MediaPipe Holistic landmarks into (1662,) vector:
+    Extract and normalize MediaPipe Holistic landmarks into (1662,) vector.
+    Normalization is relative to shoulder midpoint + shoulder width,
+    matching vsl-recognition preprocessing so word model transfer works correctly.
+
       pose:       33 × 4  = 132
       face:      468 × 3  = 1404
       left_hand:  21 × 3  = 63
@@ -83,6 +120,8 @@ def extract_keypoints(results) -> np.ndarray:
     rh = (np.array([[lm.x, lm.y, lm.z]
                     for lm in results.right_hand_landmarks.landmark]).flatten()
           if results.right_hand_landmarks else np.zeros(63))
+
+    pose, face, lh, rh = _normalize_keypoints(pose, face, lh, rh)
 
     return np.concatenate([pose, face, lh, rh])   # (1662,)
 
