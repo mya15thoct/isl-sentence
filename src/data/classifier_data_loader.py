@@ -28,7 +28,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import ISL_SEQ_DIR
 
 # Reuse helpers from data_loader.py to avoid duplication
-from data.data_loader import augment_keypoints, _sentence_to_folder, _find_folder
+from data.data_loader import augment_keypoints, _find_folder
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ def build_classifier_datasets(
         val_gen   : ClassifierDataGenerator
         meta      : dict with num_sentences, sentence2id, sentences_sorted, etc.
     """
-    seq_dir    = seq_dir    or str(ISL_SEQ_DIR / 'sequences')
+    seq_dir    = seq_dir    or str(ISL_SEQ_DIR / 'keypoints')
     label_path = label_path or str(ISL_SEQ_DIR / 'labels.json')
 
     samples, sentence2id, sentences_sorted = load_classifier_samples(

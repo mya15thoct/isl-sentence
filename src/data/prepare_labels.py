@@ -167,7 +167,7 @@ def prepare_labels(
     csv_path    = Path(csv_path)
     vocab_path  = Path(vocab_path)
     output_path = Path(output_path)
-    seq_dir     = Path(seq_dir) if seq_dir else ISL_SEQ_DIR / 'sequences'
+    seq_dir     = Path(seq_dir) if seq_dir else ISL_SEQ_DIR / 'keypoints'
 
     # Load vocab
     with open(vocab_path) as f:
@@ -262,7 +262,7 @@ if __name__ == '__main__':
                         default=str(ISL_SEQ_DIR / 'labels.json'),
                         help='Output labels JSON path')
     parser.add_argument('--seq_dir', type=str,
-                        default=str(ISL_SEQ_DIR / 'sequences'),
+                        default=str(ISL_SEQ_DIR / 'keypoints'),
                         help='Path to extracted .npy sequences')
     args = parser.parse_args()
 

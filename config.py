@@ -19,7 +19,7 @@ SERVER_BASE      = Path('/mnt/ngan')
 
 # Working directory — ALL outputs go here
 ISL_SEQ_DIR      = SERVER_BASE / 'ISL-Sequences'
-SEQUENCE_PATH    = ISL_SEQ_DIR / 'sequences'          # extracted .npy keypoints
+SEQUENCE_PATH    = ISL_SEQ_DIR / 'keypoints'          # extracted .npy keypoints
 LABEL_PATH       = ISL_SEQ_DIR / 'labels.csv'         # sentence gloss labels CSV
 VIDEO_PATH       = ISL_SEQ_DIR / 'videos'             # raw sentence videos
 CHECKPOINT_DIR   = ISL_SEQ_DIR / 'checkpoints'        # sentence model checkpoints

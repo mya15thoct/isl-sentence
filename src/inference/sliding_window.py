@@ -544,7 +544,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Sliding Window ISL Sentence Recognition (Phase 1)',
     )
-    parser.add_argument('--seq_dir',    default=str(ISL_SEQ_DIR / 'sequences'))
+    parser.add_argument('--seq_dir',    default=str(ISL_SEQ_DIR / 'keypoints'))
     parser.add_argument('--label_path', default=str(ISL_SEQ_DIR / 'labels.json'))
     parser.add_argument('--word_model', default=str(WORD_MODEL_PATH))
     parser.add_argument('--action_mapping', default=str(ACTION_MAPPING_PATH))

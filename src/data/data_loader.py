@@ -349,7 +349,7 @@ def build_datasets(
         val_gen   : SentenceDataGenerator
         meta      : dict with vocab info, num_samples, etc.
     """
-    seq_dir    = seq_dir    or str(ISL_SEQ_DIR / 'sequences')
+    seq_dir    = seq_dir    or str(ISL_SEQ_DIR / 'keypoints')
     label_path = label_path or str(ISL_SEQ_DIR / 'labels.json')
     vocab_path = vocab_path or str(ACTION_MAPPING_PATH)
 

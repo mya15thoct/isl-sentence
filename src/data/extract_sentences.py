@@ -9,7 +9,7 @@ Structure expected:
       ...                       ← multiple signers, multiple video formats
 
 Output:
-  /mnt/ngan/ISL-Sequences/sequences/
+  /mnt/ngan/ISL-Sequences/keypoints/
     <sentence_folder>/
       000001.npy                ← shape (T, 1662), variable T per video
       000002.npy
@@ -32,7 +32,7 @@ from config import ISL_SEQ_DIR
 
 # ── Default paths ─────────────────────────────────────────────────────────────
 DEFAULT_SOURCE = Path('/mnt/ngan/isl-sequence-data')
-DEFAULT_OUTPUT = ISL_SEQ_DIR / 'sequences'
+DEFAULT_OUTPUT = ISL_SEQ_DIR / 'keypoints'
 
 # ── Supported video extensions ─────────────────────────────────────────────────
 VIDEO_EXTENSIONS = {'.mp4', '.MP4', '.mov', '.MOV', '.avi', '.AVI',
@@ -160,7 +160,7 @@ def extract_all_sentences(source_dir: Path, output_dir: Path, skip_existing: boo
 
     Args:
         source_dir:    /mnt/ngan/isl-sequence-data/
-        output_dir:    /mnt/ngan/ISL-Sequences/sequences/
+        output_dir:    /mnt/ngan/ISL-Sequences/keypoints/
         skip_existing: Skip if .npy already exists (resume support)
     """
     output_dir.mkdir(parents=True, exist_ok=True)

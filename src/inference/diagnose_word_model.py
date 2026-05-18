@@ -115,7 +115,7 @@ def diagnose():
     # ── 6. Test on sentence sequence with different window sizes ──────────────
     print(f'\n[7] Testing on SENTENCE samples with different window sizes:')
 
-    sent_seq_dir = ISL_SEQ_DIR / 'sequences'
+    sent_seq_dir = ISL_SEQ_DIR / 'keypoints'
     if sent_seq_dir.exists():
         # Find first available sentence
         for sent_dir in sorted(sent_seq_dir.iterdir()):

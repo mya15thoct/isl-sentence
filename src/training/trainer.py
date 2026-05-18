@@ -398,7 +398,7 @@ def train(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--seq_dir',    default=str(ISL_SEQ_DIR / 'sequences'))
+    parser.add_argument('--seq_dir',    default=str(ISL_SEQ_DIR / 'keypoints'))
     parser.add_argument('--label_path', default=str(ISL_SEQ_DIR / 'labels.json'))
     parser.add_argument('--vocab_path', default=str(ACTION_MAPPING_PATH))
     parser.add_argument('--word_model', default=str(WORD_MODEL_PATH))

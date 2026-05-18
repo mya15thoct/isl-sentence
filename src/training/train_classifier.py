@@ -200,7 +200,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train ISL sentence classifier (Approach D)')
 
-    parser.add_argument('--seq_dir',    default=str(ISL_SEQ_DIR / 'sequences'),
+    parser.add_argument('--seq_dir',    default=str(ISL_SEQ_DIR / 'keypoints'),
                         help='Path to extracted .npy sequences folder')
     parser.add_argument('--label_path', default=str(ISL_SEQ_DIR / 'labels.json'),
                         help='Path to labels.json')
