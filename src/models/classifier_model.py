@@ -129,10 +129,25 @@ def build_classifier_model(
     x = layers.Dropout(0.3)(x)
 
     # ── Classification head ───────────────────────────────────────────────────
-    # GlobalAveragePooling collapses the temporal axis.
-    # Padded frames (zero keypoints) produce a near-constant bias offset that
-    # the network learns to discount; valid frames dominate the average.
-    x = layers.GlobalAveragePooling1D(name='temporal_pool')(x)        # (B, 64)
+    # Masked mean pooling: compute average only over valid (non-padded) frames.
+    # Padded frames have all-zero keypoints; their mask value = 0 so they are
+    # excluded from both the sum and the count.
+    # Using `inputs` (before MLP) to derive the mask avoids bias contamination.
+    frame_mask = layers.Lambda(
+        lambda t: tf.cast(
+            tf.reduce_any(tf.not_equal(t, 0.0), axis=-1, keepdims=True),
+            tf.float32,
+        ),
+        name='frame_mask',
+    )(inputs)  # (B, T, 1)  — 1 valid, 0 padded
+
+    x = layers.Lambda(
+        lambda args: (
+            tf.reduce_sum(args[0] * args[1], axis=1) /
+            tf.maximum(tf.reduce_sum(args[1], axis=1), 1.0)
+        ),
+        name='masked_pool',
+    )([x, frame_mask])  # (B, 64)
     x = layers.Dense(128, activation='relu', name='cls_dense')(x)
     x = layers.Dropout(0.4)(x)
     outputs = layers.Dense(
@@ -150,6 +165,7 @@ def build_classifier_model(
         return model
 
     transferred, skipped = 0, 0
+    transferred_names = []
     for layer in model.layers:
         try:
             src = word_model.get_layer(layer.name)
@@ -157,10 +173,12 @@ def build_classifier_model(
             if w:
                 layer.set_weights(w)
                 transferred += 1
+                transferred_names.append(layer.name)
         except Exception:
             skipped += 1
 
     print(f'[Classifier] Weights transferred: {transferred}  |  Skipped (new): {skipped}')
+    print(f'[Classifier] Transferred layers : {transferred_names}')
 
     if freeze_encoder:
         head_layers = {'temporal_pool', 'cls_dense', 'sentence_probs'}

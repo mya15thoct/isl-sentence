@@ -114,7 +114,7 @@ def train(args):
             mode='max', verbose=1,
         ),
         tf.keras.callbacks.ReduceLROnPlateau(
-            monitor='val_accuracy', factor=0.5, patience=5,
+            monitor='val_accuracy', factor=0.5, patience=10,
             min_lr=1e-6, mode='max', verbose=1,
         ),
         tf.keras.callbacks.CSVLogger(str(ckpt_dir / 'training_log.csv')),
@@ -146,7 +146,7 @@ def train(args):
         for layer in model.layers:
             layer.trainable = True
         print('\n--- Phase 2: fine-tune all layers ---')
-        lr_phase2 = args.lr / 10
+        lr_phase2 = args.lr   # full LR — encoder already warm, no need to reduce
     else:
         lr_phase2 = args.lr
 
