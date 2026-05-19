@@ -162,9 +162,19 @@ def build_classifier_model(
         print('          Proceeding with random initialisation.')
         return model
 
+    # Transfer only MLP branches — BiLSTM weights are unreliable because
+    # word model was trained on a mix of videos and single-frame images;
+    # BiLSTM layers from image-only words have no meaningful temporal weights.
+    mlp_layers = {
+        'pose_features', 'face_features', 'hand_features',
+        'shared_td1', 'shared_td2',
+    }
     transferred, skipped = 0, 0
     transferred_names = []
     for layer in model.layers:
+        if layer.name not in mlp_layers:
+            skipped += 1
+            continue
         try:
             src = word_model.get_layer(layer.name)
             w = src.get_weights()
@@ -175,22 +185,15 @@ def build_classifier_model(
         except Exception:
             skipped += 1
 
-    print(f'[Classifier] Weights transferred: {transferred}  |  Skipped (new): {skipped}')
+    print(f'[Classifier] Weights transferred: {transferred}  |  Skipped (new/bilstm): {skipped}')
     print(f'[Classifier] Transferred layers : {transferred_names}')
 
-    # ── Freeze encoder (phase 1 only) ─────────────────────────────────────────
-    # Freeze only MLP + BiLSTM (heavy word model weights).
-    # MHA + temporal attention + head remain trainable so they can adapt
-    # to sentence-level patterns from the start.
+    # ── Freeze MLP only (phase 1) ─────────────────────────────────────────────
     if freeze_encoder:
-        encoder_layers = {
-            'pose_features', 'face_features', 'hand_features',
-            'shared_td1', 'shared_td2', 'bilstm1', 'bilstm2',
-        }
         for layer in model.layers:
-            if layer.name in encoder_layers:
+            if layer.name in mlp_layers:
                 layer.trainable = False
-        print('[Classifier] MLP + BiLSTM frozen — MHA + attention + head will train')
+        print('[Classifier] MLP frozen — BiLSTM + MHA + attention + head will train')
 
     return model
 
