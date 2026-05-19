@@ -1,30 +1,30 @@
 """
-Sentence Classifier for ISL Recognition (Approach D).
+Sentence Classifier for ISL Recognition (Approach D — v2).
 
-Instead of sequence generation (CTC / Seq2Seq), reframes the problem
-as 99-class classification: encoder → GlobalAveragePooling → Dense(99).
-
-Why this works with small data:
-  - No alignment learning needed (unlike CTC)
-  - Cross-entropy loss is simple and stable
-  - Transfer from word model gives strong feature initialisation
-  - 486 samples × 10 augmentation / 99 classes ≈ 49 samples/class
+Improvements over v1:
+  1. Multi-Head Self-Attention after BiLSTM — captures long-range dependencies
+     in sentence videos (80-200 frames) that BiLSTM alone misses.
+  2. Temporal Attention pooling (transferred from word model) — replaces masked
+     mean pooling; learns which frames matter most instead of equal weighting.
+  3. Dropout 0.4 → 0.6 on classifier head — reduces overfitting with small data.
+  4. L2 regularization on Dense layers — further prevents overfitting.
 
 Architecture:
   Input (B, T, 1662)
-    → MLP branches (pose/face/hand)  [same as sentence_model.py — transfer-compatible]
-    → shared Dense layers
-    → BiLSTM × 2  (return_sequences=True)
-    → GlobalAveragePooling1D          ← collapse temporal (B, T, 64) → (B, 64)
-    → Dense(128, relu) + Dropout(0.4)
-    → Dense(num_sentences, softmax)   ← 99-class output
+    → MLP branches (pose/face/hand)       [transfer from word model]
+    → shared Dense layers                  [transfer from word model]
+    → BiLSTM(64) → BiLSTM(32)             [transfer from word model]  → (B, T, 64)
+    → MultiHeadAttention(4h, key=16)       [NEW — long sequence modeling]
+    → LayerNorm + residual
+    → Temporal Attention                   [transfer attn_td/temporal_attention]
+    → context_vector                       (B, 64)
+    → Dense(128, L2) + Dropout(0.6)
+    → Dense(num_sentences, softmax)
 
-Transfer:
-  Layer names match sentence_model.py / hybrid.py exactly so the same
-  name-based weight copy works for BiLSTM + MLP branches.
-
-Usage:
-  model = build_classifier_model(num_sentences=99, word_model_path='...')
+Transfer layers (name-matched from word model):
+  pose_features, face_features, hand_features,
+  shared_td1, shared_td2, bilstm1, bilstm2,
+  attn_td, temporal_attention, attn_apply, context_vector
 """
 
 import tensorflow as tf
@@ -37,7 +37,7 @@ from config import CHECKPOINT_DIR
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MLP BRANCHES  (identical names to sentence_model.py for weight transfer)
+# MLP BRANCHES  (identical names to word model for weight transfer)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _pose_branch(input_dim: int, name: str):
@@ -84,19 +84,20 @@ def build_classifier_model(
     freeze_encoder:  bool = False,
 ) -> Model:
     """
-    Build sentence classifier and transfer encoder weights from word model.
+    Build sentence classifier with temporal attention and MHA.
 
     Args:
         num_sentences:   Number of sentence classes (e.g. 99)
         word_model_path: Path to best_model_combined (SavedModel)
-        freeze_encoder:  Freeze all layers except classifier head.
-                         Useful for two-phase training: warm up head first,
-                         then unfreeze for full fine-tuning.
+        freeze_encoder:  If True, freeze MLP + BiLSTM layers (word model weights)
+                         during phase 1, train only MHA + attention + head.
 
     Returns:
-        Compiled-ready Keras Model
+        Keras Model ready for compilation
     """
-    # ── Encoder (identical structure to sentence_model.py) ────────────────────
+    reg = tf.keras.regularizers.l2(1e-4)
+
+    # ── Encoder ──────────────────────────────────────────────────────────────
     inputs = layers.Input(shape=(None, 1662), name='sequence_input')
     x = layers.Masking(mask_value=0.0)(inputs)
 
@@ -104,13 +105,9 @@ def build_classifier_model(
     face_kp = layers.Lambda(lambda t: t[:, :, 132:1536], name='face_split')(x)
     hand_kp = layers.Lambda(lambda t: t[:, :, 1536:],    name='hand_split')(x)
 
-    pose_branch = _pose_branch(132,  'pose')
-    face_branch = _face_branch(1404, 'face')
-    hand_branch = _hand_branch(126,  'hand')
-
-    pose_feat = layers.TimeDistributed(pose_branch, name='pose_features')(pose_kp)
-    face_feat = layers.TimeDistributed(face_branch, name='face_features')(face_kp)
-    hand_feat = layers.TimeDistributed(hand_branch, name='hand_features')(hand_kp)
+    pose_feat = layers.TimeDistributed(_pose_branch(132,  'pose'), name='pose_features')(pose_kp)
+    face_feat = layers.TimeDistributed(_face_branch(1404, 'face'), name='face_features')(face_kp)
+    hand_feat = layers.TimeDistributed(_hand_branch(126,  'hand'), name='hand_features')(hand_kp)
 
     merged = layers.Concatenate(name='feature_fusion')([pose_feat, face_feat, hand_feat])
 
@@ -128,32 +125,33 @@ def build_classifier_model(
         layers.LSTM(32, return_sequences=True), name='bilstm2')(x)  # (B, T, 64)
     x = layers.Dropout(0.3)(x)
 
-    # ── Classification head ───────────────────────────────────────────────────
-    # Masked mean pooling: compute average only over valid (non-padded) frames.
-    # Padded frames have all-zero keypoints; their mask value = 0 so they are
-    # excluded from both the sum and the count.
-    # Using `inputs` (before MLP) to derive the mask avoids bias contamination.
-    frame_mask = layers.Lambda(
-        lambda t: tf.cast(
-            tf.reduce_any(tf.not_equal(t, 0.0), axis=-1, keepdims=True),
-            tf.float32,
-        ),
-        name='frame_mask',
-    )(inputs)  # (B, T, 1)  — 1 valid, 0 padded
+    # ── Multi-Head Self-Attention (NEW) ───────────────────────────────────────
+    # Captures long-range dependencies across frames — BiLSTM sees context
+    # sequentially, MHA sees all frame pairs simultaneously.
+    mha_out = layers.MultiHeadAttention(
+        num_heads=4, key_dim=16, dropout=0.1, name='mha')(x, x)
+    x = layers.Add(name='mha_residual')([x, mha_out])       # residual connection
+    x = layers.LayerNormalization(name='mha_ln')(x)          # (B, T, 64)
 
-    x = layers.Lambda(
-        lambda args: (
-            tf.reduce_sum(args[0] * args[1], axis=1) /
-            tf.maximum(tf.reduce_sum(args[1], axis=1), 1.0)
-        ),
-        name='masked_pool',
-    )([x, frame_mask])  # (B, 64)
-    x = layers.Dense(128, activation='relu', name='cls_dense')(x)
-    x = layers.Dropout(0.4)(x)
+    # ── Temporal Attention pooling ────────────────────────────────────────────
+    # Learns which frames are most informative for sentence identity.
+    # Layer names match word model exactly → weights are transferred.
+    scores  = layers.TimeDistributed(
+        layers.Dense(1, name='attn_dense'), name='attn_td')(x)       # (B, T, 1)
+    weights = layers.Softmax(axis=1, name='temporal_attention')(scores)  # (B, T, 1)
+    x       = layers.Multiply(name='attn_apply')([x, weights])           # (B, T, 64)
+    x       = layers.Lambda(
+        lambda t: tf.reduce_sum(t, axis=1), name='context_vector')(x)    # (B, 64)
+
+    # ── Classification head ───────────────────────────────────────────────────
+    x = layers.Dense(
+        128, activation='relu',
+        kernel_regularizer=reg, name='cls_dense')(x)
+    x = layers.Dropout(0.6)(x)
     outputs = layers.Dense(
         num_sentences, activation='softmax', name='sentence_probs')(x)
 
-    model = Model(inputs=inputs, outputs=outputs, name='SentenceClassifier')
+    model = Model(inputs=inputs, outputs=outputs, name='SentenceClassifier_v2')
 
     # ── Transfer weights from word model ──────────────────────────────────────
     print(f'[Classifier] Loading word model from: {word_model_path}')
@@ -180,12 +178,19 @@ def build_classifier_model(
     print(f'[Classifier] Weights transferred: {transferred}  |  Skipped (new): {skipped}')
     print(f'[Classifier] Transferred layers : {transferred_names}')
 
+    # ── Freeze encoder (phase 1 only) ─────────────────────────────────────────
+    # Freeze only MLP + BiLSTM (heavy word model weights).
+    # MHA + temporal attention + head remain trainable so they can adapt
+    # to sentence-level patterns from the start.
     if freeze_encoder:
-        head_layers = {'temporal_pool', 'cls_dense', 'sentence_probs'}
+        encoder_layers = {
+            'pose_features', 'face_features', 'hand_features',
+            'shared_td1', 'shared_td2', 'bilstm1', 'bilstm2',
+        }
         for layer in model.layers:
-            if layer.name not in head_layers:
+            if layer.name in encoder_layers:
                 layer.trainable = False
-        print('[Classifier] Encoder frozen — only classification head will train')
+        print('[Classifier] MLP + BiLSTM frozen — MHA + attention + head will train')
 
     return model
 
@@ -206,7 +211,6 @@ if __name__ == '__main__':
     x = np.random.rand(4, 150, 1662).astype(np.float32)
     out = model(x, training=False)
     print(f'\nInput  shape : {x.shape}')
-    print(f'Output shape : {out.shape}')   # (4, 99)
+    print(f'Output shape : {out.shape}')
     assert out.shape == (4, NUM_SENTENCES)
     print('[OK] Output shape correct')
-    print(f'[OK] Probabilities sum to 1: {out.numpy().sum(axis=-1)}')
