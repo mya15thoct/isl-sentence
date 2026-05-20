@@ -189,7 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_heads',        type=int,   default=4)
     parser.add_argument('--ff_dim',           type=int,   default=256)
     parser.add_argument('--num_layers',       type=int,   default=2)
-    parser.add_argument('--dropout',          type=float, default=0.4)
+    parser.add_argument('--dropout',          type=float, default=0.3)
     parser.add_argument('--l2_reg',           type=float, default=0.0)
     args = parser.parse_args()
     train(args)
