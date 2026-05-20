@@ -18,7 +18,7 @@ from collections import defaultdict
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import ISL_SEQ_DIR
-from gloss_pipeline.inference.frame_matcher import FrameMatcher
+from gloss_pipeline.inference.mlp_decoder import MLPDecoder
 from gloss_pipeline.inference.gloss_to_sentence import GlossToSentence
 
 
@@ -54,7 +54,7 @@ def evaluate(
         folder = sent.lower().replace(' ', '_').replace(',', '').replace('.', '').replace("'", '')
         folder2sent[folder] = sent
 
-    decoder = FrameMatcher(
+    decoder = MLPDecoder(
         window_size=window_size, stride=stride, conf_threshold=conf_threshold)
     g2s     = GlossToSentence(str(labels_path))
 
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--window_size',   type=int,   default=15)
     parser.add_argument('--stride',        type=int,   default=5)
-    parser.add_argument('--threshold',     type=float, default=0.6)
+    parser.add_argument('--threshold',     type=float, default=0.4)
     args = parser.parse_args()
     evaluate(window_size=args.window_size, stride=args.stride,
              conf_threshold=args.threshold)
