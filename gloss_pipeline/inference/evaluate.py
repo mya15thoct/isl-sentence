@@ -24,9 +24,14 @@ from gloss_pipeline.inference.gloss_to_sentence import GlossToSentence
 
 def load_decoder(model_type: str, conf_threshold: float, window_size: int, stride: int):
     if model_type == 'transformer':
-        from gloss_pipeline.inference.mlp_decoder import MLPDecoder
         ckpt = str(ISL_SEQ_DIR / 'checkpoints' / 'joint_transformer' / 'best_joint_transformer')
         mapp = str(ISL_SEQ_DIR / 'checkpoints' / 'joint_transformer' / 'class_mapping.json')
+        return MLPDecoder(model_path=ckpt, mapping_path=mapp,
+                          conf_threshold=conf_threshold,
+                          window_size=window_size, stride=stride)
+    if model_type == 'cross_branch':
+        ckpt = str(ISL_SEQ_DIR / 'checkpoints' / 'cross_branch_attn' / 'best_cross_branch_attn')
+        mapp = str(ISL_SEQ_DIR / 'checkpoints' / 'cross_branch_attn' / 'class_mapping.json')
         return MLPDecoder(model_path=ckpt, mapping_path=mapp,
                           conf_threshold=conf_threshold,
                           window_size=window_size, stride=stride)
@@ -159,7 +164,7 @@ if __name__ == '__main__':
     parser.add_argument('--stride',        type=int,   default=5)
     parser.add_argument('--threshold',     type=float, default=0.35)
     parser.add_argument('--model',         type=str,   default='mlp',
-                        choices=['mlp', 'transformer'])
+                        choices=['mlp', 'transformer', 'cross_branch'])
     args = parser.parse_args()
     evaluate(window_size=args.window_size, stride=args.stride,
              conf_threshold=args.threshold, model_type=args.model)
