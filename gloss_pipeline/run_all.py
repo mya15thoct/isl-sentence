@@ -48,10 +48,12 @@ print('STEP 3/3 — Test inference')
 print('='*60)
 from gloss_pipeline.pipeline import run
 
-test_sample = ISL_SEQ_DIR / 'keypoints' / 'i_am_hungry'
-npy_files   = sorted(test_sample.glob('*.npy'))
+keypoints_dir = ISL_SEQ_DIR / 'keypoints'
+npy_files     = sorted(keypoints_dir.rglob('*.npy'))
 if npy_files:
-    result = run(str(npy_files[0]))
+    test_file = npy_files[0]
+    print(f'Using: {test_file}')
+    result = run(str(test_file))
     print(f'\nPredicted: "{result}"')
 else:
     print('No test sample found — skipping inference test')
