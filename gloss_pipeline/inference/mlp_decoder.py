@@ -1,14 +1,17 @@
 """
 MLP frame-by-frame decoder for sentence inference.
 
-Apply trained static MLP classifier to each frame of sentence video.
-Temporal smoothing via sliding window majority vote → gloss sequence.
+Two decoding strategies:
+  1. sliding_window: majority vote per window (original)
+  2. peak_detection: smooth probability curve → find peaks per class (better)
 """
 
 import json
 import numpy as np
 import tensorflow as tf
 from pathlib import Path
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import find_peaks
 import sys
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -20,16 +23,21 @@ class MLPDecoder:
         self,
         model_path:     str   = None,
         mapping_path:   str   = None,
+        conf_threshold: float = 0.35,
+        smooth_sigma:   float = 3.0,
+        min_peak_dist:  int   = 10,
+        # sliding window params (kept for compatibility)
         window_size:    int   = 15,
         stride:         int   = 5,
-        conf_threshold: float = 0.4,
     ):
         model_path   = model_path   or str(ISL_SEQ_DIR / 'checkpoints' / 'static_classifier' / 'best_static_classifier')
         mapping_path = mapping_path or str(ISL_SEQ_DIR / 'checkpoints' / 'static_classifier' / 'class_mapping.json')
 
+        self.conf_threshold = conf_threshold
+        self.smooth_sigma   = smooth_sigma
+        self.min_peak_dist  = min_peak_dist
         self.window_size    = window_size
         self.stride         = stride
-        self.conf_threshold = conf_threshold
 
         self.model = tf.keras.models.load_model(model_path)
 
@@ -39,29 +47,53 @@ class MLPDecoder:
         print(f'[MLPDecoder] {len(self.id2class)} classes loaded')
 
     def decode(self, sequence: np.ndarray) -> list[tuple[str, float]]:
-        """sequence: (T, 1662) → [(gloss, conf), ...]"""
-        T = sequence.shape[0]
+        """
+        sequence: (T, 1662)
 
-        # Batch predict all frames at once
+        Steps:
+          1. MLP → (T, C) per-frame probabilities
+          2. Gaussian smooth each class over time
+          3. Find peaks in smoothed probability curves
+          4. At each peak position, take the class with highest smoothed prob
+          5. Sort peaks by time position → gloss sequence
+        """
+        # 1. Predict all frames at once
         probs = self.model(
-            tf.cast(sequence, tf.float32), training=False).numpy()  # (T, C)
+            tf.cast(sequence, tf.float32), training=False).numpy()   # (T, C)
 
-        raw = []
-        for start in range(0, T - self.window_size + 1, self.stride):
-            window_probs = probs[start: start + self.window_size]   # (W, C)
+        # 2. Gaussian smooth each class over time
+        smoothed = gaussian_filter1d(probs, sigma=self.smooth_sigma, axis=0)  # (T, C)
 
-            # Mean probability over window → majority vote
-            mean_prob  = window_probs.mean(axis=0)                  # (C,)
-            idx        = int(np.argmax(mean_prob))
-            best_gloss = self.id2class.get(idx, '?')
-            best_conf  = float(mean_prob[idx])
-            raw.append((best_gloss, best_conf))
+        # 3. Find peaks per class
+        peak_events = []   # (frame_idx, class_idx, confidence)
+        for c in range(smoothed.shape[1]):
+            peaks, props = find_peaks(
+                smoothed[:, c],
+                height=self.conf_threshold,
+                distance=self.min_peak_dist,
+            )
+            for p in peaks:
+                peak_events.append((int(p), c, float(smoothed[p, c])))
 
-        # Filter + remove consecutive duplicates
+        if not peak_events:
+            return []
+
+        # 4. Sort by time position
+        peak_events.sort(key=lambda x: x[0])
+
+        # 5. Merge nearby peaks — keep highest confidence within min_peak_dist frames
+        merged = []
+        for frame_idx, c, conf in peak_events:
+            if merged and abs(frame_idx - merged[-1][0]) < self.min_peak_dist:
+                if conf > merged[-1][2]:
+                    merged[-1] = (frame_idx, c, conf)
+            else:
+                merged.append((frame_idx, c, conf))
+
+        # 6. Convert to gloss sequence, remove consecutive duplicates
         decoded = []
-        for gloss, conf in raw:
-            if conf < self.conf_threshold:
-                continue
+        for _, c, conf in merged:
+            gloss = self.id2class.get(c, '?')
             if not decoded or decoded[-1][0] != gloss:
                 decoded.append((gloss, conf))
 
