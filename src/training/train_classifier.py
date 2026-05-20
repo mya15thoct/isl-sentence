@@ -210,7 +210,7 @@ if __name__ == '__main__':
                         default=str(ISL_SEQ_DIR / 'checkpoints' / 'classifier'),
                         help='Directory to save checkpoints')
 
-    parser.add_argument('--epochs',      type=int,   default=100)
+    parser.add_argument('--epochs',      type=int,   default=300)
     parser.add_argument('--batch_size',  type=int,   default=8)
     parser.add_argument('--lr',          type=float, default=1e-4)
     parser.add_argument('--val_split',   type=float, default=0.15)

@@ -33,14 +33,13 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from config import CHECKPOINT_DIR
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MLP BRANCHES  (identical names to word model for weight transfer)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _pose_branch(input_dim: int, name: str):
+def _pose_branch(name: str):
     return tf.keras.Sequential([
         layers.Dense(128, activation='relu', name=f'{name}_d1'),
         layers.BatchNormalization(name=f'{name}_bn1'),
@@ -49,7 +48,7 @@ def _pose_branch(input_dim: int, name: str):
     ], name=name)
 
 
-def _face_branch(input_dim: int, name: str):
+def _face_branch(name: str):
     return tf.keras.Sequential([
         layers.Dense(512, activation='relu', name=f'{name}_d1'),
         layers.BatchNormalization(name=f'{name}_bn1'),
@@ -63,7 +62,7 @@ def _face_branch(input_dim: int, name: str):
     ], name=name)
 
 
-def _hand_branch(input_dim: int, name: str):
+def _hand_branch(name: str):
     return tf.keras.Sequential([
         layers.Dense(256, activation='relu', name=f'{name}_d1'),
         layers.BatchNormalization(name=f'{name}_bn1'),
@@ -105,9 +104,9 @@ def build_classifier_model(
     face_kp = layers.Lambda(lambda t: t[:, :, 132:1536], name='face_split')(x)
     hand_kp = layers.Lambda(lambda t: t[:, :, 1536:],    name='hand_split')(x)
 
-    pose_feat = layers.TimeDistributed(_pose_branch(132,  'pose'), name='pose_features')(pose_kp)
-    face_feat = layers.TimeDistributed(_face_branch(1404, 'face'), name='face_features')(face_kp)
-    hand_feat = layers.TimeDistributed(_hand_branch(126,  'hand'), name='hand_features')(hand_kp)
+    pose_feat = layers.TimeDistributed(_pose_branch('pose'), name='pose_features')(pose_kp)
+    face_feat = layers.TimeDistributed(_face_branch('face'), name='face_features')(face_kp)
+    hand_feat = layers.TimeDistributed(_hand_branch('hand'), name='hand_features')(hand_kp)
 
     merged = layers.Concatenate(name='feature_fusion')([pose_feat, face_feat, hand_feat])
 
@@ -147,7 +146,7 @@ def build_classifier_model(
     x = layers.Dense(
         128, activation='relu',
         kernel_regularizer=reg, name='cls_dense')(x)
-    x = layers.Dropout(0.6)(x)
+    x = layers.Dropout(0.7)(x)
     outputs = layers.Dense(
         num_sentences, activation='softmax', name='sentence_probs')(x)
 
