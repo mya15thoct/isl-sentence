@@ -22,6 +22,18 @@ from gloss_pipeline.inference.mlp_decoder import MLPDecoder
 from gloss_pipeline.inference.gloss_to_sentence import GlossToSentence
 
 
+def load_decoder(model_type: str, conf_threshold: float, window_size: int, stride: int):
+    if model_type == 'transformer':
+        from gloss_pipeline.inference.mlp_decoder import MLPDecoder
+        ckpt = str(ISL_SEQ_DIR / 'checkpoints' / 'joint_transformer' / 'best_joint_transformer')
+        mapp = str(ISL_SEQ_DIR / 'checkpoints' / 'joint_transformer' / 'class_mapping.json')
+        return MLPDecoder(model_path=ckpt, mapping_path=mapp,
+                          conf_threshold=conf_threshold,
+                          window_size=window_size, stride=stride)
+    return MLPDecoder(conf_threshold=conf_threshold,
+                      window_size=window_size, stride=stride)
+
+
 def token_f1(predicted: list, reference: list) -> tuple[float, float, float]:
     pred_set = set(predicted)
     ref_set  = set(reference)
@@ -41,6 +53,7 @@ def evaluate(
     window_size:   int  = 30,
     stride:        int  = 10,
     conf_threshold: float = 0.3,
+    model_type:    str  = 'mlp',
 ):
     keypoints_dir = keypoints_dir or ISL_SEQ_DIR / 'keypoints'
     labels_path   = labels_path   or ISL_SEQ_DIR / 'labels.json'
@@ -54,8 +67,7 @@ def evaluate(
         folder = sent.lower().replace(' ', '_').replace(',', '').replace('.', '').replace("'", '')
         folder2sent[folder] = sent
 
-    decoder = MLPDecoder(
-        window_size=window_size, stride=stride, conf_threshold=conf_threshold)
+    decoder = load_decoder(model_type, conf_threshold, window_size, stride)
     g2s     = GlossToSentence(str(labels_path))
 
     all_precision, all_recall, all_f1 = [], [], []
@@ -145,7 +157,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--window_size',   type=int,   default=15)
     parser.add_argument('--stride',        type=int,   default=5)
-    parser.add_argument('--threshold',     type=float, default=0.4)
+    parser.add_argument('--threshold',     type=float, default=0.35)
+    parser.add_argument('--model',         type=str,   default='mlp',
+                        choices=['mlp', 'transformer'])
     args = parser.parse_args()
     evaluate(window_size=args.window_size, stride=args.stride,
-             conf_threshold=args.threshold)
+             conf_threshold=args.threshold, model_type=args.model)
