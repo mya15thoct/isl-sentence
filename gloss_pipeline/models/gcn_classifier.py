@@ -81,11 +81,23 @@ def build_gcn_classifier(
         print('[GCN] Feature extractor frozen')
 
     # ── Build GCN on top ──────────────────────────────────────────────────────
+    word_seq_len = word_model.input_shape[1]   # 201
+
     # Fixed-length input (seq_len, 1662) for training on pseudo-sequences
     inputs = layers.Input(shape=(seq_len, 1662), name='sequence_input')
 
+    # Pad to word model's expected seq_len if needed
+    if seq_len < word_seq_len:
+        pad_len = word_seq_len - seq_len
+        x_padded = layers.ZeroPadding1D(padding=(0, pad_len))(inputs)  # (B, 201, 1662)
+    else:
+        x_padded = inputs
+
     # Extract motion dynamic features from word model
-    x = feature_extractor(inputs)    # (B, seq_len, 64)
+    x = feature_extractor(x_padded)    # (B, word_seq_len, 64)
+
+    # Slice back to seq_len after feature extraction
+    x = layers.Lambda(lambda t: t[:, :seq_len, :])(x)   # (B, seq_len, 64)
 
     # Temporal adjacency matrix
     A = _build_temporal_adjacency(seq_len)   # (seq_len, seq_len)
