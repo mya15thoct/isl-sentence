@@ -61,7 +61,12 @@ class DualStreamDecoder:
 
     def _predict_word(self, window: np.ndarray):
         """window: (T, 1662) → (gloss, confidence)"""
-        x    = window[np.newaxis].astype(np.float32)   # (1, T, 1662)
+        expected = self.word_model.input_shape[1]   # fixed seq_len (e.g. 201)
+        if expected is not None and window.shape[0] != expected:
+            padded = np.zeros((expected, 1662), dtype=np.float32)
+            padded[:min(window.shape[0], expected)] = window[:expected]
+            window = padded
+        x    = window[np.newaxis].astype(np.float32)
         prob = self.word_model.predict(x, verbose=0)[0]
         idx  = int(np.argmax(prob))
         return self.word_id2gloss.get(idx, '?'), float(prob[idx])
