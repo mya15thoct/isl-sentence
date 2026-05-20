@@ -38,33 +38,23 @@ class MLPDecoder:
         self.id2class = {int(k): v.upper() for k, v in mapping['id2class'].items()}
         print(f'[MLPDecoder] {len(self.id2class)} classes loaded')
 
-    def _predict_frame(self, frame: np.ndarray) -> tuple[str, float]:
-        x    = frame[np.newaxis].astype(np.float32)
-        prob = self.model.predict(x, verbose=0)[0]
-        idx  = int(np.argmax(prob))
-        return self.id2class.get(idx, '?'), float(prob[idx])
-
     def decode(self, sequence: np.ndarray) -> list[tuple[str, float]]:
         """sequence: (T, 1662) → [(gloss, conf), ...]"""
-        T   = sequence.shape[0]
+        T = sequence.shape[0]
+
+        # Batch predict all frames at once
+        probs = self.model(
+            tf.cast(sequence, tf.float32), training=False).numpy()  # (T, C)
+
         raw = []
-
         for start in range(0, T - self.window_size + 1, self.stride):
-            window = sequence[start: start + self.window_size]
+            window_probs = probs[start: start + self.window_size]   # (W, C)
 
-            # Majority vote: collect predictions for all frames in window
-            votes = {}
-            for frame in window:
-                gloss, conf = self._predict_frame(frame)
-                if gloss not in votes:
-                    votes[gloss] = []
-                votes[gloss].append(conf)
-
-            if not votes:
-                continue
-
-            best_gloss = max(votes, key=lambda g: np.mean(votes[g]))
-            best_conf  = float(np.mean(votes[best_gloss]))
+            # Mean probability over window → majority vote
+            mean_prob  = window_probs.mean(axis=0)                  # (C,)
+            idx        = int(np.argmax(mean_prob))
+            best_gloss = self.id2class.get(idx, '?')
+            best_conf  = float(mean_prob[idx])
             raw.append((best_gloss, best_conf))
 
         # Filter + remove consecutive duplicates
