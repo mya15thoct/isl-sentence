@@ -60,12 +60,12 @@ class CrossBranchBlock(layers.Layer):
 
 def build_cross_branch_attn(
     num_classes: int,
-    d_model:     int   = 64,
+    d_model:     int   = 128,
     num_heads:   int   = 4,
-    ff_dim:      int   = 128,
+    ff_dim:      int   = 256,
     num_layers:  int   = 2,
-    dropout:     float = 0.5,
-    l2_reg:      float = 1e-4,
+    dropout:     float = 0.4,
+    l2_reg:      float = 0.0,
 ) -> Model:
     inputs = layers.Input(shape=(1662,), name='frame_input')
 
