@@ -34,3 +34,6 @@ Thumbs.db
 
 # Context summary
 txt
+
+# Local docs (not for repo)
+docs/
