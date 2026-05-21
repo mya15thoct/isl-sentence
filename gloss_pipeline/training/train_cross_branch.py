@@ -160,7 +160,7 @@ def train(args):
             filepath=str(ckpt_dir / 'best_cross_branch_attn'),
             monitor='val_accuracy', save_best_only=True, mode='max', verbose=1),
         tf.keras.callbacks.ReduceLROnPlateau(
-            monitor='val_accuracy', factor=0.5, patience=10,
+            monitor='val_accuracy', factor=0.5, patience=15,
             min_lr=1e-6, mode='max', verbose=1),
         tf.keras.callbacks.CSVLogger(str(ckpt_dir / 'training_log.csv')),
     ]
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size',       type=int,   default=64)
     parser.add_argument('--lr',               type=float, default=3e-4)
     parser.add_argument('--val_split',        type=float, default=0.2)
-    parser.add_argument('--patience',         type=int,   default=30)
+    parser.add_argument('--patience',         type=int,   default=50)
     parser.add_argument('--augment_factor',   type=int,   default=10)
     parser.add_argument('--d_model',          type=int,   default=128)
     parser.add_argument('--num_heads',        type=int,   default=4)
