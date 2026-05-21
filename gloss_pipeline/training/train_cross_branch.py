@@ -19,6 +19,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import ISL_SEQ_DIR
 sys.path.append(str(Path(__file__).parent.parent))
 from models.cross_branch_attn import build_cross_branch_attn
+from models.arcface_model import build_arcface_model
 from data.preprocessing import apply_all
 
 
@@ -136,29 +137,39 @@ def train(args):
                                   augment_factor=1, training=False)
 
 
-    model = build_cross_branch_attn(
-        num_classes = len(class2id),
-        d_model     = args.d_model,
-        num_heads   = args.num_heads,
-        ff_dim      = args.ff_dim,
-        num_layers  = args.num_layers,
-        dropout     = args.dropout,
-        l2_reg      = args.l2_reg,
-    )
+    if args.arcface:
+        model = build_arcface_model(
+            num_classes = len(class2id),
+            d_model     = args.d_model,
+            num_heads   = args.num_heads,
+            ff_dim      = args.ff_dim,
+            num_layers  = args.num_layers,
+            dropout     = args.dropout,
+            s           = args.arcface_s,
+            m           = args.arcface_m,
+        )
+        ckpt_name = 'best_arcface'
+    else:
+        model = build_cross_branch_attn(
+            num_classes = len(class2id),
+            d_model     = args.d_model,
+            num_heads   = args.num_heads,
+            ff_dim      = args.ff_dim,
+            num_layers  = args.num_layers,
+            dropout     = args.dropout,
+            l2_reg      = args.l2_reg,
+        )
+        ckpt_name = 'best_cross_branch_attn'
     model.summary()
 
-    model.compile(
-        optimizer = tf.keras.optimizers.Adam(args.lr),
-        loss      = 'sparse_categorical_crossentropy',
-        metrics   = ['accuracy'],
-    )
+    model.compile(optimizer=tf.keras.optimizers.Adam(args.lr))
 
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
             monitor='val_accuracy', patience=args.patience,
             restore_best_weights=True, mode='max', verbose=1),
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=str(ckpt_dir / 'best_cross_branch_attn'),
+            filepath=str(ckpt_dir / ckpt_name),
             monitor='val_accuracy', save_best_only=True, mode='max', verbose=1),
         tf.keras.callbacks.ReduceLROnPlateau(
             monitor='val_accuracy', factor=0.5, patience=15,
@@ -201,5 +212,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_layers',       type=int,   default=2)
     parser.add_argument('--dropout',          type=float, default=0.3)
     parser.add_argument('--l2_reg',           type=float, default=0.0)
+    parser.add_argument('--arcface',          action='store_true')
+    parser.add_argument('--arcface_s',        type=float, default=30.0)
+    parser.add_argument('--arcface_m',        type=float, default=0.5)
     args = parser.parse_args()
     train(args)
