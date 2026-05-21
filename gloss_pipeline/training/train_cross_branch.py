@@ -110,7 +110,7 @@ def load_dataset(kp_dir: Path):
             kp = np.load(npy).astype(np.float32)
             if kp.shape[0] != 1662:
                 continue
-            X.append(apply_all(kp))
+            X.append(kp)
             y.append(cid)
 
     X = np.stack(X)

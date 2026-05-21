@@ -59,8 +59,7 @@ class MLPDecoder:
           4. At each peak position, take the class with highest smoothed prob
           5. Sort peaks by time position → gloss sequence
         """
-        # 1. Apply same preprocessing as training, then predict all frames
-        sequence = np.stack([apply_all(f) for f in sequence])
+        # 1. Predict all frames at once
         probs = self.model(
             tf.cast(sequence, tf.float32), training=False).numpy()   # (T, C)
 
