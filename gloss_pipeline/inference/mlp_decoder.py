@@ -16,6 +16,8 @@ import sys
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import ISL_SEQ_DIR
+sys.path.append(str(Path(__file__).parent.parent))
+from data.preprocessing import apply_all
 
 
 class MLPDecoder:
@@ -57,7 +59,8 @@ class MLPDecoder:
           4. At each peak position, take the class with highest smoothed prob
           5. Sort peaks by time position → gloss sequence
         """
-        # 1. Predict all frames at once
+        # 1. Apply same preprocessing as training, then predict all frames
+        sequence = np.stack([apply_all(f) for f in sequence])
         probs = self.model(
             tf.cast(sequence, tf.float32), training=False).numpy()   # (T, C)
 

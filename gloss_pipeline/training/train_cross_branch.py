@@ -19,6 +19,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import ISL_SEQ_DIR
 sys.path.append(str(Path(__file__).parent.parent))
 from models.cross_branch_attn import build_cross_branch_attn
+from data.preprocessing import apply_all
 
 
 # ── Augmentation (same as Joint Transformer) ──────────────────────────────────
@@ -109,7 +110,7 @@ def load_dataset(kp_dir: Path):
             kp = np.load(npy).astype(np.float32)
             if kp.shape[0] != 1662:
                 continue
-            X.append(kp)
+            X.append(apply_all(kp))
             y.append(cid)
 
     X = np.stack(X)
