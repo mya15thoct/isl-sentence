@@ -14,6 +14,7 @@ import numpy as np
 import tensorflow as tf
 from pathlib import Path
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import ISL_SEQ_DIR
@@ -126,6 +127,10 @@ def train(args):
     val_gen   = AugmentedDataset(X_val, y_val, args.batch_size,
                                   augment_factor=1, training=False)
 
+    weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
+    class_weight = {i: w for i, w in enumerate(weights)}
+    print(f'Class weight range: {weights.min():.2f} – {weights.max():.2f}')
+
     model = build_cross_branch_attn(
         num_classes = len(class2id),
         d_model     = args.d_model,
@@ -161,6 +166,7 @@ def train(args):
         validation_data = val_gen,
         epochs          = args.epochs,
         callbacks       = callbacks,
+        class_weight    = class_weight,
         verbose         = 1,
     )
 
