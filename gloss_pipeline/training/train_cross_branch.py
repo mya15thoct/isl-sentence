@@ -160,6 +160,8 @@ def train(args):
             l2_reg      = args.l2_reg,
         )
         ckpt_name = 'best_cross_branch_attn'
+    # Build model before summary
+    model(tf.zeros((1, 1662)))
     model.summary()
 
     model.compile(optimizer=tf.keras.optimizers.Adam(args.lr))
