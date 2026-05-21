@@ -14,7 +14,6 @@ import numpy as np
 import tensorflow as tf
 from pathlib import Path
 from sklearn.model_selection import train_test_split
-from sklearn.utils.class_weight import compute_class_weight
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import ISL_SEQ_DIR
@@ -75,19 +74,27 @@ class AugmentedDataset(tf.keras.utils.Sequence):
         self.batch_size     = batch_size
         self.augment_factor = augment_factor
         self.training       = training
+        self.indices        = np.arange(len(X))
+        if training:
+            np.random.shuffle(self.indices)
 
     def __len__(self):
         n = len(self.X) * (self.augment_factor if self.training else 1)
         return (n + self.batch_size - 1) // self.batch_size
 
     def __getitem__(self, idx):
-        start   = (idx * self.batch_size) % len(self.X)
-        end     = min(start + self.batch_size, len(self.X))
-        X_batch = self.X[start:end].copy()
-        y_batch = self.y[start:end]
+        start = (idx * self.batch_size) % len(self.X)
+        end   = min(start + self.batch_size, len(self.X))
+        idxs  = self.indices[start:end]
+        X_batch = self.X[idxs].copy()
+        y_batch = self.y[idxs]
         if self.training:
             X_batch = np.stack([augment(x) for x in X_batch])
         return X_batch, y_batch
+
+    def on_epoch_end(self):
+        if self.training:
+            np.random.shuffle(self.indices)
 
 
 def load_dataset(kp_dir: Path):
@@ -127,9 +134,6 @@ def train(args):
     val_gen   = AugmentedDataset(X_val, y_val, args.batch_size,
                                   augment_factor=1, training=False)
 
-    weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
-    class_weight = {i: w for i, w in enumerate(weights)}
-    print(f'Class weight range: {weights.min():.2f} – {weights.max():.2f}')
 
     model = build_cross_branch_attn(
         num_classes = len(class2id),
@@ -166,7 +170,6 @@ def train(args):
         validation_data = val_gen,
         epochs          = args.epochs,
         callbacks       = callbacks,
-        class_weight    = class_weight,
         verbose         = 1,
     )
 
