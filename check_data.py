@@ -11,7 +11,7 @@ from pathlib import Path
 from collections import Counter
 
 sys.path.append(str(Path(__file__).parent))
-from config import ISL_SEQ_DIR
+from config import ISL_SEQ_DIR, SERVER_BASE
 
 # ── 1. Frame keypoints ────────────────────────────────────────────────────────
 kp_dir = ISL_SEQ_DIR / 'frame_keypoints'
@@ -119,6 +119,45 @@ if label_path.exists():
         print(f'    {l}')
 else:
     print(f'  [NOT FOUND] {label_path}')
+
+# ── 5. Word videos (recognition dataset) ─────────────────────────────────────
+print()
+print('=' * 60)
+print('WORD VIDEOS (recognition dataset — /mnt/ngan/recognition/)')
+print('=' * 60)
+
+exts = {'.mp4', '.avi', '.mov', '.mkv', '.webm'}
+for candidate in [
+    SERVER_BASE / 'recognition' / 'videos',
+    SERVER_BASE / 'recognition' / 'sequences',
+    SERVER_BASE / 'ISL-Frames-Data',
+    SERVER_BASE / 'vsl_data',
+]:
+    print(f'\n  [{candidate}]')
+    if not candidate.exists():
+        print('    NOT FOUND')
+        continue
+    subdirs = sorted([d for d in candidate.iterdir() if d.is_dir()])
+    if not subdirs:
+        items = list(candidate.iterdir())
+        print(f'    (flat) {len(items)} items')
+        continue
+    counts = {}
+    for sd in subdirs:
+        vids = [f for f in sd.iterdir()
+                if f.is_file() and (f.suffix.lower() in exts or f.suffix == '.npy')]
+        counts[sd.name] = len(vids)
+    vals = list(counts.values())
+    total = sum(vals)
+    if total == 0:
+        print(f'    {len(subdirs)} subdirs, all empty')
+        continue
+    print(f'    Classes : {len(counts)}')
+    print(f'    Total   : {total}')
+    print(f'    Avg     : {np.mean(vals):.1f}  Min: {np.min(vals)}  Max: {np.max(vals)}')
+    print('    Top 10:')
+    for name, n in sorted(counts.items(), key=lambda x: -x[1])[:10]:
+        print(f'      {name:<30s} {n}')
 
 print()
 print('Done.')
