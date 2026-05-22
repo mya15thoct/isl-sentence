@@ -57,14 +57,17 @@ def augment(kp: np.ndarray, p: float = 0.5) -> np.ndarray:
         pose = kp[:132].reshape(33, 4).copy()
         for l, r in POSE_FLIP_MAP.items():
             pose[l], pose[r] = pose[r].copy(), pose[l].copy()
-        pose[:, 0] = 1.0 - pose[:, 0]
+        pose[:, 0] = -pose[:, 0]      # mirror x around shoulder midpoint (x=0 after normalization)
         kp[:132] = pose.flatten()
+        # Face: mirror x around centre (x=0 after shoulder normalization)
+        kp[132:1536:3] = -kp[132:1536:3]
+        # Hands: swap left ↔ right and mirror x
         lh = kp[1536:1599].copy()
-        rh = kp[1599:].copy()
-        lh[0::3] = 1.0 - lh[0::3]
-        rh[0::3] = 1.0 - rh[0::3]
+        rh = kp[1599:1662].copy()
+        lh[0::3] = -lh[0::3]
+        rh[0::3] = -rh[0::3]
         kp[1536:1599] = rh
-        kp[1599:]     = lh
+        kp[1599:1662] = lh
 
     return kp
 
@@ -164,7 +167,14 @@ def train(args):
     model(tf.zeros((1, 1662)))
     model.summary()
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(args.lr))
+    if not args.arcface:
+        model.compile(
+            optimizer = tf.keras.optimizers.Adam(args.lr),
+            loss      = 'sparse_categorical_crossentropy',
+            metrics   = ['accuracy'],
+        )
+    else:
+        model.compile(optimizer=tf.keras.optimizers.Adam(args.lr))
 
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
