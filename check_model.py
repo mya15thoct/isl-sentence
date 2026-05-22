@@ -40,6 +40,15 @@ print(f'Sample classes: {list(class2id.keys())[:10]}')
 
 # ── 2. Load data ──────────────────────────────────────────────────────────────
 print(f'\nLoading sequences from {seq_dir} ...')
+SEQ_LEN = 93  # model expects this fixed length
+
+def pad_or_trim(seq, length):
+    T = seq.shape[0]
+    if T >= length:
+        return seq[:length]
+    pad = np.zeros((length - T, seq.shape[1]), dtype=np.float32)
+    return np.concatenate([seq, pad], axis=0)
+
 X, y = [], []
 missing = []
 for class_dir in sorted(seq_dir.iterdir()):
@@ -52,21 +61,19 @@ for class_dir in sorted(seq_dir.iterdir()):
     cid = class2id[cname]
     for npy in sorted(class_dir.glob('*.npy')):
         seq = np.load(npy).astype(np.float32)
-        # Model may expect fixed-length or variable; try mean-pool to single frame
-        if seq.ndim == 2:
-            kp = seq.mean(axis=0)   # (T, D) → (D,)
-        else:
-            kp = seq
-        X.append(kp)
+        if seq.ndim == 1:
+            seq = seq.reshape(1, -1)
+        seq = pad_or_trim(seq, SEQ_LEN)   # (93, 1662)
+        X.append(seq)
         y.append(cid)
 
 if missing:
-    print(f'  Classes in seq_dir not in mapping ({len(missing)}): {missing[:5]}...')
+    print(f'  Classes not in mapping ({len(missing)}): {missing[:5]}...')
 
-X = np.stack(X).astype(np.float32)
+X = np.stack(X).astype(np.float32)   # (N, 93, 1662)
 y = np.array(y, dtype=np.int32)
 print(f'  Loaded: {len(X)} samples, {len(set(y))} classes')
-print(f'  Feature dim: {X.shape[1]}')
+print(f'  Shape : {X.shape}')
 
 # ── 3. Evaluate each checkpoint ──────────────────────────────────────────────
 for model_name in ['best_model']:
@@ -79,12 +86,8 @@ for model_name in ['best_model']:
         model = tf.keras.models.load_model(str(model_path), compile=False)
         print(f'  Input : {model.input_shape}  Output: {model.output_shape}')
 
-        # Reshape X if needed
-        in_dim = model.input_shape[-1]
-        if X.shape[1] != in_dim:
-            print(f'  [WARN] feature dim mismatch: data={X.shape[1]}, model={in_dim}')
-            print('  Trying raw sequences (first frame)...')
-            continue
+        exp = model.input_shape
+        print(f'  Model expects: {exp}  |  Data shape: {X.shape}')
 
         preds = np.argmax(model.predict(X, batch_size=128, verbose=0), axis=1)
         acc   = float(np.mean(preds == y))
