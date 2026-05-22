@@ -69,7 +69,7 @@ print(f'  Loaded: {len(X)} samples, {len(set(y))} classes')
 print(f'  Feature dim: {X.shape[1]}')
 
 # ── 3. Evaluate each checkpoint ──────────────────────────────────────────────
-for model_name in ['best_model_combined', 'best_model_enriched', 'best_model']:
+for model_name in ['best_model']:
     model_path = ckpt_base / model_name
     if not model_path.exists():
         print(f'\n[SKIP] {model_name} not found')
