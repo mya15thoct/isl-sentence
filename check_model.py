@@ -9,11 +9,11 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
 from config import SERVER_BASE
 
-ckpt_base = Path('/mnt/ngan/recognition/checkpoints')
+ckpt_base = Path('/mnt/ngan/recognition/checkpoints/mlp')
 seq_dir   = SERVER_BASE / 'recognition' / 'sequences'
 
 # ── 1. Load action mapping ────────────────────────────────────────────────────
-mapping_path = ckpt_base / 'action_mapping_combined.json'
+mapping_path = ckpt_base / 'action_mapping.json'
 if not mapping_path.exists():
     print(f'[NOT FOUND] {mapping_path}')
     sys.exit(1)
