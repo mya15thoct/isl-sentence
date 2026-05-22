@@ -40,7 +40,7 @@ print(f'Sample classes: {list(class2id.keys())[:10]}')
 
 # ── 2. Load data ──────────────────────────────────────────────────────────────
 print(f'\nLoading sequences from {seq_dir} ...')
-SEQ_LEN = 93  # model expects this fixed length
+SEQ_LEN = 201  # model expects this fixed length
 
 def pad_or_trim(seq, length):
     T = seq.shape[0]
