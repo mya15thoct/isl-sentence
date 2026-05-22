@@ -1,49 +1,93 @@
 """
-Quick check: what is /mnt/ngan/recognition/checkpoints/best_model trained on?
+Check accuracy of recognition/checkpoints models on recognition/sequences data.
 """
 import sys, json
 import numpy as np
 import tensorflow as tf
 from pathlib import Path
 
+sys.path.append(str(Path(__file__).parent))
+from config import SERVER_BASE
+
 ckpt_base = Path('/mnt/ngan/recognition/checkpoints')
+seq_dir   = SERVER_BASE / 'recognition' / 'sequences'
 
-# ── 1. List all files in each sub-dir ────────────────────────────────────────
-print('=== Files in recognition/checkpoints ===')
-for item in sorted(ckpt_base.iterdir()):
-    if item.is_dir():
-        files = sorted(item.iterdir())
-        print(f'\n  [{item.name}/]')
-        for f in files:
-            print(f'    {f.name}  ({f.stat().st_size/1024:.0f} KB)')
-    else:
-        print(f'  {item.name}  ({item.stat().st_size/1024:.0f} KB)')
-
-# ── 2. Load action mapping ────────────────────────────────────────────────────
+# ── 1. Load action mapping ────────────────────────────────────────────────────
 mapping_path = ckpt_base / 'action_mapping_combined.json'
-if mapping_path.exists():
-    with open(mapping_path) as f:
-        mapping = json.load(f)
-    print(f'\n=== action_mapping_combined.json ===')
-    if isinstance(mapping, dict):
-        print(f'  Keys: {list(mapping.keys())[:10]}')
-        for k, v in list(mapping.items())[:5]:
-            print(f'  {k}: {v}')
-        print(f'  Total entries: {len(mapping)}')
-    elif isinstance(mapping, list):
-        print(f'  Total classes: {len(mapping)}')
-        print(f'  First 10: {mapping[:10]}')
+if not mapping_path.exists():
+    print(f'[NOT FOUND] {mapping_path}')
+    sys.exit(1)
 
-# ── 3. Load best_model and print summary ─────────────────────────────────────
-for model_name in ['best_model_combined', 'best_model', 'best_model_enriched']:
+with open(mapping_path) as f:
+    raw = json.load(f)
+
+# mapping may be {class_name: id} or {id: class_name}
+if isinstance(raw, dict):
+    # detect direction
+    first_key = next(iter(raw))
+    if first_key.isdigit():
+        id2class = {int(k): v for k, v in raw.items()}
+        class2id = {v: k for k, v in id2class.items()}
+    else:
+        class2id = raw
+        id2class = {v: k for k, v in raw.items()}
+elif isinstance(raw, list):
+    class2id = {c: i for i, c in enumerate(raw)}
+    id2class = {i: c for i, c in enumerate(raw)}
+
+print(f'Mapping: {len(class2id)} classes')
+print(f'Sample classes: {list(class2id.keys())[:10]}')
+
+# ── 2. Load data ──────────────────────────────────────────────────────────────
+print(f'\nLoading sequences from {seq_dir} ...')
+X, y = [], []
+missing = []
+for class_dir in sorted(seq_dir.iterdir()):
+    if not class_dir.is_dir():
+        continue
+    cname = class_dir.name
+    if cname not in class2id:
+        missing.append(cname)
+        continue
+    cid = class2id[cname]
+    for npy in sorted(class_dir.glob('*.npy')):
+        seq = np.load(npy).astype(np.float32)
+        # Model may expect fixed-length or variable; try mean-pool to single frame
+        if seq.ndim == 2:
+            kp = seq.mean(axis=0)   # (T, D) → (D,)
+        else:
+            kp = seq
+        X.append(kp)
+        y.append(cid)
+
+if missing:
+    print(f'  Classes in seq_dir not in mapping ({len(missing)}): {missing[:5]}...')
+
+X = np.stack(X).astype(np.float32)
+y = np.array(y, dtype=np.int32)
+print(f'  Loaded: {len(X)} samples, {len(set(y))} classes')
+print(f'  Feature dim: {X.shape[1]}')
+
+# ── 3. Evaluate each checkpoint ──────────────────────────────────────────────
+for model_name in ['best_model_combined', 'best_model_enriched', 'best_model']:
     model_path = ckpt_base / model_name
-    if model_path.exists():
-        print(f'\n=== Loading {model_name} ===')
-        try:
-            model = tf.keras.models.load_model(str(model_path), compile=False)
-            model.summary(line_length=80)
-            print(f'  Input shape : {model.input_shape}')
-            print(f'  Output shape: {model.output_shape}')
-            break
-        except Exception as e:
-            print(f'  Error: {e}')
+    if not model_path.exists():
+        print(f'\n[SKIP] {model_name} not found')
+        continue
+    print(f'\n=== {model_name} ===')
+    try:
+        model = tf.keras.models.load_model(str(model_path), compile=False)
+        print(f'  Input : {model.input_shape}  Output: {model.output_shape}')
+
+        # Reshape X if needed
+        in_dim = model.input_shape[-1]
+        if X.shape[1] != in_dim:
+            print(f'  [WARN] feature dim mismatch: data={X.shape[1]}, model={in_dim}')
+            print('  Trying raw sequences (first frame)...')
+            continue
+
+        preds = np.argmax(model.predict(X, batch_size=128, verbose=0), axis=1)
+        acc   = float(np.mean(preds == y))
+        print(f'  Accuracy on recognition/sequences: {acc:.4f} ({acc*100:.1f}%)')
+    except Exception as e:
+        print(f'  Error: {e}')
