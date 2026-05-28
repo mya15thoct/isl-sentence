@@ -105,10 +105,10 @@ def main() -> None:
     with holistic:
         for idx, row in enumerate(rows, start=1 + args.start):
             uid = row["uid"]
-            video_path = Path(row.get("video_path") or "")
-            if not video_path.exists():
-                found = find_video(args.video_root, uid)
-                video_path = found if found else video_path
+            raw_video_path = row.get("video_path", "").strip()
+            video_path = Path(raw_video_path) if raw_video_path else None
+            if video_path is None or not video_path.is_file():
+                video_path = find_video(args.video_root, uid)
 
             out_path = output_path_for(row, args.output_root)
             row = dict(row)
@@ -126,7 +126,7 @@ def main() -> None:
                 skip_count += 1
                 continue
 
-            if not video_path.exists():
+            if video_path is None or not video_path.is_file():
                 row["extract_status"] = "missing_video"
                 row["extract_error"] = f"video not found for uid={uid}"
                 processed.append(row)
