@@ -1,0 +1,575 @@
+uid,text,category,video_path,exists,extension,word,word_id,relation_type,source_csv,example_count,description_count
+0EaLX2t1wPU_d,fast or sudden.,description,,0,,rapid,0EaLX2t1wPU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+0FUZJWoZ7Ho_d,having little value or importance,description,,0,,trivial,0FUZJWoZ7Ho_w,defines_word,word-description-dataset_v1.1.csv,0,0
+0gXoXdqFarg_d,money that is paid to someone in exchange for something that has been lost or damaged or for some problem,description,,0,,compensation,0gXoXdqFarg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+0k_QNlHob74_d,"If a machine or vehicle breaks down, it stops working",description,,0,,break down,0k_QNlHob74_w,defines_word,word-description-dataset_v1.1.csv,0,0
+0pth6-vW81w_d,"able to make decisions quickly and confidently, or showing this quality.",description,,0,,decisive,0pth6-vW81w_w,defines_word,word-description-dataset_v1.1.csv,0,0
+0u6f9dxpCAI_d,a member of the government in Britain and many other countries who is in charge of a particular department or has an important position in it,description,,0,,minister,0u6f9dxpCAI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+0WtA2tG2DYA_d,the ability to say or do the right thing without making anyone unhappy or angry,description,,0,,tact,0WtA2tG2DYA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+0YoN6sdJ84Y_d,"to behave as if something is true when you know that it is not, especially in order to deceive people or as a game",description,,0,,pretend,0YoN6sdJ84Y_w,defines_word,word-description-dataset_v1.1.csv,0,0
+1A_qjxuOGNg_d,an uncomfortable feeling when you doubt if you are doing the right thing,description,,0,,qulam,1A_qjxuOGNg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+1BN1txMJPpo_d,"to make a complaint in an unhappy voice, usually about something that does not seem important to other people",description,,0,,moan,1BN1txMJPpo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+1_DthSKKZDU_d,to show or make something clear.,description,,0,,demonstrate,1_DthSKKZDU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+1k-AsMjTZbI_d,"the process of doing something, especially when dealing with a problem or difficulty",description,,0,,action,1k-AsMjTZbI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+1Kus_VFkXlk_d,"If an unpleasant feeling or situation persists, it continues to exist",description,,0,,persist,1Kus_VFkXlk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+1TqHCiBoJMs_d,"to get something, especially by asking for it, buying it, working for it, or producing it from something else",description,,0,,obtain,1TqHCiBoJMs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+1y33mnpgqyE_d,"to add as part of something else; put in as part of a set, group, or category",description,,0,,include,1y33mnpgqyE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+21Toxytaq_A_d,to support or improve something or make it stronger,description,,0,,bolster,21Toxytaq_A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+29HmB-dzhZo_d,"to make an urgent, emotional statement or request for something.",description,,0,,plead,29HmB-dzhZo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2A5tpFkt8ic_d,"to express great pleasure or happiness, especially at someone else's defeat or failure",description,,0,,exult,2A5tpFkt8ic_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2BPZs83dBQg_d,"especially, or more than usual",description,,0,,particularly,2BPZs83dBQg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2Fq4W-J5MZw_d,to use something for the wrong purpose in a way that is harmful or morally wrong,description,,0,,abuse,2Fq4W-J5MZw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2H-t8bYQGUE_d,able to change or be changed easily according to the situation.,description,,0,,flexible,2H-t8bYQGUE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2ldqLNKUekA_d,the particular combination of qualities in a person or place that makes them different from others,description,,0,,character,2ldqLNKUekA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2LUrrdA633g_d,"to say that an event or action will happen in the future, especially as a result of knowledge or experience",description,,0,,predict,2LUrrdA633g_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2nJ6ahb45OU_d,a close friend,description,,0,,buddy,2nJ6ahb45OU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2_qktKmVcNQ_d,having or showing practical knowledge and experience,description,,0,,savvy,2_qktKmVcNQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+2rrQeCAecbU_d,"to limit an activity, person, or problem in some way",description,,0,,confine,2rrQeCAecbU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+30weefbWxWs_d,no person,description,,0,,no one,30weefbWxWs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+3G3wXa7Ax_A_d,"the fact of being with a person or people, or the person or people you are with",description,,0,,company,3G3wXa7Ax_A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+3hAYTF2TKGc_d,to do something again,description,,0,,redo,3hAYTF2TKGc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+3mMDY-zHiH8_d,"to flow slowly out of something through a small opening, or to slowly produce a thick sticky liquid",description,,0,,ooze,3mMDY-zHiH8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+3N7i4iMB4_U_d,to embarrass someone or make them feel uncomfortable,description,,0,,abash,3N7i4iMB4_U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+3TOhOciY-v8_d,"to force someone to go somewhere with you, often using threats or violence.",description,,0,,abduct,3TOhOciY-v8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+429wv1kvK_c_d,to drop a few pieces or drops of something over a surface,description,,0,,sprinkle,429wv1kvK_c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+48WUtsrvBYg_d,making you feel calm,description,,0,,soothing,48WUtsrvBYg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+4BiIL375NuQ_d,"to trust someone or something and know that that person or thing will help you or do what you want or expect him, her, or it to do",description,,0,,depend on,4BiIL375NuQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+4dTj4Awahks_d,"in a way that is not clearly expressed, known, described, or decided",description,,0,,vaguely,4dTj4Awahks_w,defines_word,word-description-dataset_v1.1.csv,0,0
+4QYv6IFjNbQ_d,"to fail to guess or understand the real cost, size, difficulty, etc. of something",description,,0,,underestimate - 1,4QYv6IFjNbQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+4RdjdI90j0M_d,Waiting to happen.,description,,0,,pending,4RdjdI90j0M_w,defines_word,word-description-dataset_v1.1.csv,0,0
+4uVjzBqNXkE_d,secretly and often dishonestly,description,,0,,furtively,4uVjzBqNXkE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+4vfboqjtAXo_d,"a liking for, an enjoyment of, or a habit of doing something.",description,,0,,penchant,4vfboqjtAXo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+50Qibhk4sD0_d,thinking or worrying about something too much,description,,0,,preoccupied,50Qibhk4sD0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+_52T6uMp5X8_d,A good understanding of someone and an ability to communicate well with them.,description,,0,,rapport,_52T6uMp5X8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+5dfUuufFLZk_d,relating to or belonging to the armed forces,description,,0,,military,5dfUuufFLZk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+5iIb7JC1mC8_d,"to shake slightly, often because of strong emotion",description,,0,,quiver,5iIb7JC1mC8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+5ncS0vBocO0_d,someone who travels to places where no one has ever been in order to find out what is there,description,,0,,explorer,5ncS0vBocO0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+5xPTHpYQfeE_d,"the act of studying or examining something in detail, in order to discover more about it",description,,0,,analysis,5xPTHpYQfeE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+68GdgKqKsrk_d,a subject or problem that people are thinking and talking about.,description,,0,,issue,68GdgKqKsrk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+69Vvb09Sq5U_d,to express a quality or feeling through the way that you look and behave,description,,0,,emanate - 1,69Vvb09Sq5U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6DqUWmPTkHI_d,"to go away from someone or something, for a short time or permanently",description,,0,,leave,6DqUWmPTkHI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6egMMBnQUbY_d,"to mix with and join society or a group of people, often changing to suit their way of life, habits, and customs",description,,0,,integrate,6egMMBnQUbY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6_Lnzu1WFPI_d,to finish something successfully or to achieve something,description,,0,,accomplish,6_Lnzu1WFPI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6mb7FlpNvFY_d,the calculation of taking an amount or a part of something away from a total or the amount that is taken away,description,,0,,deduction,6mb7FlpNvFY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6MxCP_583q8_d,"of or from a long time ago, having lasted for a very long time",description,,0,,ancient,6MxCP_583q8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6nwBq3QX9J0_d,"extremely great, or too great to be described or expressed exactly",description,,0,,inestimable,6nwBq3QX9J0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6qJDRpoe_Yc_d,using words in a clever and funny way,description,,0,,witty,6qJDRpoe_Yc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6sFJreYzn1c_d,They left the country out of fear of persecution.,description,,0,,persecutions,6sFJreYzn1c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6VINDvdwb_E_d,to cause or allow something to continue for a period of time.,description,,0,,sustain,6VINDvdwb_E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+6zErcTU0HNQ_d,"a large group of people who live together in an organized way, making decisions about how to do things and sharing the work that needs to be done. All the people in a country, or in several similar countries, can be referred to as a society",description,,0,,society,6zErcTU0HNQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+72lco2u92iQ_d,"an event at which objects such as paintings are shown to the public, a situation in which someone shows a particular skill or quality to the public, or the act of showing these things",description,,0,,exhibition,72lco2u92iQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+7PcZoqPll0k_d,the larger number or part of something,description,,0,,majority,7PcZoqPll0k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+7S-pRkbzQ1I_d,to steal something  pinch,description,,0,,nick,7S-pRkbzQ1I_w,defines_word,word-description-dataset_v1.1.csv,0,0
+7tK-aXT9AM8_d,a list of the food that you can eat in a restaurant,description,,0,,menu,7tK-aXT9AM8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+861X7yZmXwU_d,to criticize or speak in an angry manner to someone,description,,0,,berate,861X7yZmXwU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+8LoVo8y_Oic_d,"a state or an example of problems or trouble, often causing a delay or loss of comfort",description,,0,,inconvenience,8LoVo8y_Oic_w,defines_word,word-description-dataset_v1.1.csv,0,0
+8pwnTDtKBE0_d,She stood up and walked towards him.,description,,0,,towards,8pwnTDtKBE0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+8WoE12Rn2SE_d,"involving a lot of different parts, in a way that is difficult to understand",description,,0,,complicated,8WoE12Rn2SE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+9BKcG6j7LDU_d,unsuccessful; of no value,description,,0,,vain,9BKcG6j7LDU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+9nv55rJUEkA_d,easily annoyed,description,,0,,peevish,9nv55rJUEkA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+9OAMotf4jFE_d,a company that produces goods in large numbers,description,,0,,manufacturer,9OAMotf4jFE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+9pN1y7vMnEg_d,A bossy person is always telling people what to do.,description,,0,,bossy,9pN1y7vMnEg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+A0Vios3F4H0_d,representing,description,,0,,behalf,A0Vios3F4H0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+a2oGVqtgvwc_d,used when you are giving or asking for information that is completely correct,description,,0,,exactly,a2oGVqtgvwc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+a8vtO4iAq6g_d,a house or other building and the land on which it is built,description,,0,,premises,a8vtO4iAq6g_w,defines_word,word-description-dataset_v1.1.csv,0,0
+AALbFZ16ms8_d,"seeming likely to be true, or able to be believed",description,,0,,plausible,AALbFZ16ms8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ABZhHI6228g_d,"If something that you want eludes you, you do not succeed in achieving it",description,,0,,elude - 1,ABZhHI6228g_w,defines_word,word-description-dataset_v1.1.csv,0,0
+afpdqLzBytI_d,making you believe something that is not true.,description,,0,,deceptive,afpdqLzBytI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+AHaC7ncPHjM_d,Including Many different types of people or things.,description,,0,,diverse,AHaC7ncPHjM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+aIpcJDHHlWo_d,A collection of poems of stories,description,,0,,anthology,aIpcJDHHlWo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+AJbqUacnP-g_d,"very surprising, usually in a pleasing way, especially by being large in amount or size",description,,0,,stupendous,AJbqUacnP-g_w,defines_word,word-description-dataset_v1.1.csv,0,0
+AjXeuvRxnL0_d,the money necessary for a particular purpose,description,,0,,the wherewithal,AjXeuvRxnL0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+anCvgjkC1Js_d,"an imaginary creature like a man but extremely tall, strong, and usually very cruel, appearing especially in children's stories.",description,,0,,giant,anCvgjkC1Js_w,defines_word,word-description-dataset_v1.1.csv,0,0
+A_ND2Q9fO2s_d,the group of people who represent their country in a foreign country,description,,0,,embassy,A_ND2Q9fO2s_w,defines_word,word-description-dataset_v1.1.csv,0,0
+AnhTIMU_EzI_d,the unit of money used in most European Union countries,description,,0,,euro,AnhTIMU_EzI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+a-tA9XP1DTQ_d,"to copy someone's speech or behavior, or to copy something as a model",description,,0,,imitate,a-tA9XP1DTQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+atCTXG7PL_E_d,to think carefully and for a long period about something,description,,0,,ruminate,atCTXG7PL_E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+aU7Yxmt7Obw_d,"to speak angrily to someone, telling that person that you disagree with them.",description,,0,,argue,aU7Yxmt7Obw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+AVDuEdEExK8_d,"to ask someone to do or not do something in a very sincere, emotional, and determined way",description,,0,,implore,AVDuEdEExK8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+azo6kLMV32E_d,not anyone,description,,0,,nobody,azo6kLMV32E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+B2xV05A7TbI_d,to put two or more numbers or amounts together to get a total to put two or more numbers or amounts together to get a total,description,,0,,add,B2xV05A7TbI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+B7idRBMZUvw_d,"to fight in a rough, noisy, uncontrolled way",description,,0,,brawl,B7idRBMZUvw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BaSt1HrxXq0_d,to stop or prevent (someone or something) from entering a place.,description,,0,,keep out,BaSt1HrxXq0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+bb3WuX4Mqo4_d,skilled and experienced,description,,0,,proficient,bb3WuX4Mqo4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BC1eDWKCSpQ_d,"Methods, beliefs, ideas, etc. that are eclectic combine whatever seem the best or most useful things from many different areas or systems, rather than following a single system",description,,0,,eclectic,BC1eDWKCSpQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BGG5x7Qr10A_d,in a way that will not become loose,description,,0,,firmly,BGG5x7Qr10A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BG__MHnFZgE_d,1an outpouring of news or gossip,description,,0,,earful,BG__MHnFZgE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+bGqx2eKgdB0_d,"smooth and soft, or not too sharp, bright, new, or rough",description,,0,,mellow,bGqx2eKgdB0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BH7-iBjng_8_d,"to fail to understand how strong, skillful, intelligent, or determined someone, especially a competitor, is",description,,0,,underestimate - 2,BH7-iBjng_8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+bJA2HuIKJTQ_d,Used to express polite or formal apology or regret.,description,,0,,afraid,bJA2HuIKJTQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+_bKPoTpqCjI_d,an expression of strong feeling that is difficult to control,description,,0,,outpouring,_bKPoTpqCjI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+bmqS93j8WJ8_d,"able to do things effectively and skillfully, and to achieve resultsShe's a very capable judge.",description,,0,,capable,bmqS93j8WJ8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BNF2q1Hysj8_d,a condition giving a greater chance of success,description,,0,,advantage,BNF2q1Hysj8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BPkY6fJerkM_d,"a part of a machine, or a set of parts that work together",description,,0,,mechanism,BPkY6fJerkM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BPu7NlTLvnU_d,used to emphasize that something is not large or important,description,,0,,mere,BPu7NlTLvnU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+bRHRKa5R-bI_d,- the management of relationships between countries,description,,0,,diplomacy,bRHRKa5R-bI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+brsHudT88m0_d,continuing for ever in the same way.,description,,0,,perpetual,brsHudT88m0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BsarjXadUR0_d,to show that you think someone or something is stupid.,description,,0,,laugh at,BsarjXadUR0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Bvu2bvf0Nhw_d,"to be greater than a number or amount, or to go past an allowed limit",description,,0,,exceed,Bvu2bvf0Nhw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BwHKycUKnYM_d,the set of things that are happening and the conditions that exist at a particular time and place,description,,0,,situation,BwHKycUKnYM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BWpU3Ya3iJo_d,"a chemical element, such as iron or gold, or a mixture of such elements, such as steel, that is generally hard and strong, and through which electricity and heat can travel",description,,0,,metal,BWpU3Ya3iJo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+BYDhyNP5fK8_d,"stupid, not correct, or not carefully thought about",description,,0,,fatuous,BYDhyNP5fK8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+bZVGRZcLzJE_d,to be engaged to someone,description,,0,,engaged,bZVGRZcLzJE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+c1KkkUmCbrM_d,extremely frightened,description,,0,,petrified,c1KkkUmCbrM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+C2Y-lifiGVQ_d,"(someone who has) a natural ability to be good at something, especially without being taught.",description,,0,,talent,C2Y-lifiGVQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+-c5cUfu5gLU_d,"to keep someone happy, especially for a short time",description,,0,,amuse,-c5cUfu5gLU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+CB5Qabozm6w_d,an occasion when two or more people or things communicate with or react to each other.,description,,0,,interaction,CB5Qabozm6w_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ci_iGsLDZ9w_d,Most important or best; leading,description,,0,,foremost,ci_iGsLDZ9w_w,defines_word,word-description-dataset_v1.1.csv,0,0
+cJ0FKENj2P0_d,not known to you,description,,0,,unfamiliar,cJ0FKENj2P0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+CKP94wfySWw_d,"to try to change or have an influence on things that are not your responsibility, especially by criticizing in a damaging or annoying way",description,,0,,meddle,CKP94wfySWw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+CLSIZPQeWJU_d,a device that measures the amount of something that is used,description,,0,,meter,CLSIZPQeWJU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+c-mirXvUBoI_d,Influence is the power to make other people agree with your opinions or do what you want.,description,,0,,influence,c-mirXvUBoI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+c-PT1cEougQ_d,to legally take another person's child into your own family and take care of him or her as your own child.,description,,0,,adopt,c-PT1cEougQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+cQHsoQOqsRM_d,An abstract idea or way of thinking is based on general ideas rather than on real things and events.,description,,0,,abstract,cQHsoQOqsRM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+CTRMyQvvHgk_d,to interrupt what someone is doing,description,,0,,disturb,CTRMyQvvHgk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+cUPWJz6KO2c_d,the ability to share someone else's feelings or experiences by imagining what it would be like to be in that person's situation,description,,0,,empathy,cUPWJz6KO2c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+cVOJIH7mEas_d,"an amount that is more than acceptable, expected, or reasonable",description,,0,,excess,cVOJIH7mEas_w,defines_word,word-description-dataset_v1.1.csv,0,0
+cxZ0S7zefIw_d,"to leave a place, thing, or person, usually for ever",description,,0,,abandon,cxZ0S7zefIw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+CYCMCwZN_vc_d,"the joint (= place where two bones are connected) between the foot and the leg, or the thin part of the leg just above the foot",description,,0,,ankle,CYCMCwZN_vc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+cZsnmlgNSqY_d,to make something the legal property of another person,description,,0,,transfer,cZsnmlgNSqY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+D9O50mQ7vRo_d,to give something as an honour.,description,,0,,bestow,D9O50mQ7vRo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DAncSE6TBaA_d,chief executive officer the person with the most important position in a company,description,,0,,ceo,DAncSE6TBaA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DB9Z1FczZoM_d,to keep or continue to have something,description,,0,,retain,DB9Z1FczZoM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DBktOqTh9Uk_d,a feeling of energetic interest in a particular subject or activity and an eagerness to be involved in it,description,,0,,enthusiasm,DBktOqTh9Uk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DEqpFLzcLXY_d,"to need something, or to make something necessary",description,,0,,require,DEqpFLzcLXY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+dHEY_4DtsMo_d,"the ability to protect against attack or harm, or something used to protect against attack or harm",description,,0,,defense,dHEY_4DtsMo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DJdvsTI55Rg_d,a general agreement.,description,,0,,consensus,DJdvsTI55Rg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DNxiR9b7OOk_d,a strong feeling that makes you want to hurt someone or be unpleasant because of something unfair or unkind that has happened,description,,0,,anger,DNxiR9b7OOk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+dokyT_rJn0o_d,"to move yourself into a warm and comfortable position, especially one in which your body is against another person or covered by something",description,,0,,snuggle,dokyT_rJn0o_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DqMYRnRJ94E_d,"to continue to live or exist, especially after coming close to dying or being destroyed or after being in a difficult or threatening situation.",description,,0,,survive,DqMYRnRJ94E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+dqSzE5KFNZA_d,before the present time,description,,0,,already,dqSzE5KFNZA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Dt9aqWLkAnI_d,to be someone's property,description,,0,,belong to,Dt9aqWLkAnI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+-du0Sljs6fg_d,He damaged his leg so badly in the accident that the bone was exposed.,description,,0,,expose,-du0Sljs6fg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+DvcwO5iqUlA_d,"to speak very quietly, using the breath but not the voice, so that only the person close to you can hear you",description,,0,,whisper,DvcwO5iqUlA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+dVLZa2PQEII_d,to look at someone or something with a very annoyed expressionThe boy scowled at her and reluctantly followed her back into school.,description,,0,,scowl,dVLZa2PQEII_w,defines_word,word-description-dataset_v1.1.csv,0,0
+_dwG7oAYTWo_d,The need for something.,description,,0,,necessity,_dwG7oAYTWo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+e66CYnJ_Oxs_d,"an important job, especially a military one, that someone is sent somewhere to do",description,,0,,mission,e66CYnJ_Oxs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Efx9Z-mQGHw_d,to be able to buy or do something because you have enough money or time,description,,0,,afford,Efx9Z-mQGHw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+eie6yTNbN4k_d,a duty or responsibility that is hard to bear,description,,0,,burden,eie6yTNbN4k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+eiL5yM0oUqc_d,"the quality of delivering a clear, strong message",description,,0,,eloquence,eiL5yM0oUqc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ekLLpYdKPsY_d,"strange or unusual, sometimes in a humorous way",description,,0,,eccentric,ekLLpYdKPsY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+eMuNhD-cV_o_d,"relating to the mind, or involving the process of thinking",description,,0,,mental,eMuNhD-cV_o_w,defines_word,word-description-dataset_v1.1.csv,0,0
+eMWPveqzDsE_d,to understand the meaning of something in a particular way,description,,0,,construed,eMWPveqzDsE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+EPNiDVjb9dA_d,further away in the distance (than something),description,,0,,beyond,EPNiDVjb9dA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+e-QGcgqMfKE_d,The art of good handwriting,description,,0,,calligraphy,e-QGcgqMfKE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+eSuhRYLOqPw_d,relating to or someone's country or place of birth or someone who was born in a particular country or place,description,,0,,native,eSuhRYLOqPw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+F0kiWvgS_Mo_d,to have someone work or do a job for you and pay them for it,description,,0,,employ,F0kiWvgS_Mo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+F4s2N8TarlU_d,very well known and important,description,,0,,prominent,F4s2N8TarlU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+f6Iw1o3XV14_d,to make someone angry,description,,0,,annoy,f6Iw1o3XV14_w,defines_word,word-description-dataset_v1.1.csv,0,0
+F6VCtv2uMzY_d,someone who tells funny or interesting stories,description,,0,,raconteur,F6VCtv2uMzY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+F7hqMlZEL_E_d,to become unable to speak or almost begin to cry because of sadness or strong emotion,description,,0,,choke up,F7hqMlZEL_E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+fcwVXkPLpgU_d,"having or based on a clear understanding and good judgment of a situation, resulting in an advantage",description,,0,,shrewd,fcwVXkPLpgU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FDJaEKvAQdc_d,a short piece of information that you give to a person when you cannot speak to them directly,description,,0,,message,FDJaEKvAQdc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FFAtBcMZ44Y_d,to repeat the words that someone else has said or written,description,,0,,quote,FFAtBcMZ44Y_w,defines_word,word-description-dataset_v1.1.csv,0,0
+fHagURBiKXE_d,straight up or vertical.,description,,0,,upright,fHagURBiKXE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+fhND7fBEQZo_d,something or someone that is very large.,description,,0,,bulk,fhND7fBEQZo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FJA9G_Rs3ow_d,to give up something that is valuable to you in order to help another person,description,,0,,sacrifice,FJA9G_Rs3ow_w,defines_word,word-description-dataset_v1.1.csv,0,0
+fL4hxu29Mr4_d,"to make a long, high cry, usually because of pain or sadness",description,,0,,wail,fL4hxu29Mr4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FmWH_7DnOAo_d,to become calm and relax,description,,0,,chillax,FmWH_7DnOAo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Fpg5dgFQofk_d,"every thing, person, etc. in a group of two or more, considered separately",description,,0,,each,Fpg5dgFQofk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FQMfuZZB4VI_d,a feeling of sadness and being sorry for something you have done,description,,0,,remorse,FQMfuZZB4VI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FRLkJ9K3sVQ_d,to force someone to do something,description,,0,,impel,FRLkJ9K3sVQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FRs6fgJZjt4_d,"to notice or understand the difference between two things, or to make one person or thing seem different from another",description,,0,,distinguish,FRs6fgJZjt4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+fsV1Qztx9wE_d,"to increase in size, number, or importance, or to make something increase in this way.",description,,0,,expand,fsV1Qztx9wE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FvCq7gTlVpI_d,"to feel sad or complain about something, especially a bad situation",description,,0,,repine,FvCq7gTlVpI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Fwfx0nVgcFk_d,to fall down suddenly because of pressure or having no strength or support,description,,0,,collapse,Fwfx0nVgcFk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+fXbEW56zHiA_d,annoyed or unhappy,description,,0,,displeased,fXbEW56zHiA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+FYrSrNzUu_s_d,to tell someone to do something or to behave in a particular way,description,,0,,enjoin,FYrSrNzUu_s_w,defines_word,word-description-dataset_v1.1.csv,0,0
+g0q93htmqBk_d,long or longer than usual,description,,0,,extended,g0q93htmqBk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+G2uGKFEY6ZQ_d,done or shown publicly or in an obvious way and not secret,description,,0,,overt,G2uGKFEY6ZQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+G4uo3UzqvGc_d,"to keep someone or something safe from injury, damage, or loss",description,,0,,protect,G4uo3UzqvGc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gAyLOpZm3zc_d,something on sale at a lower price than its true value.,description,,0,,bargain,gAyLOpZm3zc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gBFxE8tJu8Q_d,"a substance made from a combination of different substances, or any combination of different things",description,,0,,mixture,gBFxE8tJu8Q_w,defines_word,word-description-dataset_v1.1.csv,0,0
+GbSl8yhZDv8_d,"a social meeting planned before it happens, especially one between two people who have or might have a romantic relationship",description,,0,,date,GbSl8yhZDv8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gCckaUKv4WM_d,acceptable or right for someone or something,description,,0,,suitable,gCckaUKv4WM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gCeq77IenX4_d,taking action by causing change and not only reacting to change when it happens,description,,0,,proactive,gCeq77IenX4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gdERGK7LQP8_d,perplexed and confused; very puzzled.,description,,0,,bewildered,gdERGK7LQP8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+-Gf2SGGyb4Y_d,Very great surprise,description,,0,,astonishment,-Gf2SGGyb4Y_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Gfl5msAbkjk_d,"to pay attention to something, especially advice or a warning",description,,0,,heed,Gfl5msAbkjk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gFlhA6DWhFA_d,in the correct way or at the correct time; as expected,description,,0,,duly,gFlhA6DWhFA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gglZG3bINHs_d,"holding tightly onto something, or keeping an opinion in a determined way",description,,0,,tenacious,gglZG3bINHs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+gM7W5P_OrvQ_d,to (cause something or someone to) change in form or character,description,,0,,convert,gM7W5P_OrvQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+g-MCCzbZUJ4_d,to laugh at someone or something in a silly and often unkind way,description,,0,,snicker,g-MCCzbZUJ4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+GrKIA99UGMI_d,not behaving in a way that is as calm and wise as people expect from someone of your age,description,,0,,immature,GrKIA99UGMI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+GuQ6ZLzpMXk_d,a platform or compartment housed in a shaft for raising and lowering people or things to different levels; a lift.,description,,0,,elevator,GuQ6ZLzpMXk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+-GwCYXp1DPY_d,people's abilities to communicate with each other and work well together,description,,0,,soft skills,-GwCYXp1DPY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+h3gikil15a4_d,"the area of a town that surrounds someone's home, or the people who live in this area",description,,0,,neighborhood,h3gikil15a4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+H6a1QmSuToM_d,stupid or unreasonable and deserving to be laughed at,description,,0,,ridiculous,H6a1QmSuToM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+h8-4K-hPOW8_d,the act of talking about something with other people and telling them your ideas or opinions.,description,,0,,discussion,h8-4K-hPOW8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+H8GPCrTnXjM_d,to be happy to do something if it needed.,description,,0,,willing,H8GPCrTnXjM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+HaqqVsp2BuE_d,in fact or really,description,,0,,actually,HaqqVsp2BuE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+HbeLuowRM5Q_d,A story of someone's life written by another person,description,,0,,biography,HbeLuowRM5Q_w,defines_word,word-description-dataset_v1.1.csv,0,0
+hfy-JZGyIMQ_d,"very strange and unusual, unexpected, or not natural.",description,,0,,weird,hfy-JZGyIMQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+HJEGTd-qang_d,having no money,description,,0,,penniless,HJEGTd-qang_w,defines_word,word-description-dataset_v1.1.csv,0,0
+hlBdcAdQnUU_d,to lie or sit enjoying the warmth especially of the sun,description,,0,,bask,hlBdcAdQnUU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+hQqPbzh4PVk_d,involving people opposing or disagreeing with each other,description,,0,,adversarial,hQqPbzh4PVk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+hQudNswgkKE_d,"A writer of a book, article, or document.",description,,0,,author,hQudNswgkKE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+H_ry9HoXblM_d,"to try to do something, especially something difficult",description,,0,,attempt,H_ry9HoXblM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+HStLfm7kKck_d,Extremely important or necessary,description,,0,,crucial,HStLfm7kKck_w,defines_word,word-description-dataset_v1.1.csv,0,0
+HtoVMp9gYOA_d,higher in rank or social position than others,description,,0,,superior,HtoVMp9gYOA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+HursY-R9rqE_d,"to make or become less severe, difficult, unpleasant, painful, etc.",description,,0,,ease,HursY-R9rqE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+HYuXJFqNOtk_d,to give freedom or free movement to someone or something,description,,0,,release,HYuXJFqNOtk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Hz_bFjlgUQw_d,Serious discussion of a subject in which many people take part,description,,0,,debate,Hz_bFjlgUQw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+-hZpPIT6N4U_d,"to think carefully, especially about possibilities and opinions",description,,0,,reflect,-hZpPIT6N4U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+I1dQ1sS8Lio_d,"the weaker of two competitors,  or anyone  not expected to win a competition",description,,0,,underdog - 2,I1dQ1sS8Lio_w,defines_word,word-description-dataset_v1.1.csv,0,0
+I6_GW8TBU3E_d,a person who claims neither faith nor disbelief in the existence of God,description,,0,,agnostic,I6_GW8TBU3E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+I96CIiP3WZc_d,something or someone that annoys you or causes trouble for you.,description,,0,,nuisance,I96CIiP3WZc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+IBOW-mmD4hg_d,"using few words, sometimes in a way that seems rude or unfriendly",description,,0,,terse,IBOW-mmD4hg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ICg_JsFuHVs_d,to explain something or make something clear,description,,0,,elucidate,ICg_JsFuHVs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+IcTCDlydAHk_d,"correctly, or in a satisfactory way",description,,0,,properly,IcTCDlydAHk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+IfXpH2RFlP4_d,to (cause something to) break suddenly into very small pieces,description,,0,,shatter,IfXpH2RFlP4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+iG66ukXl8o0_d,"to show great respect for someone or something, especially in public",description,,0,,honour,iG66ukXl8o0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+IGjd6dWiXvE_d,a person responsible for controlling or administering an   organization or group of staff.,description,,0,,manager,IGjd6dWiXvE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+igs1Z9qDB1k_d,"to help someone or something out of a dangerous, harmful, or unpleasant situation.",description,,0,,rescue,igs1Z9qDB1k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Ihhwph3nCnI_d,"a strong wish, especially one that is difficult or impossible to control",description,,0,,urge,Ihhwph3nCnI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ii0pewO8jNI_d,"done secretly, without anyone seeing or knowing",description,,0,,surreptitious,ii0pewO8jNI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+IK7897iu8Yw_d,to give a description of something or information about it to someone,description,,0,,report,IK7897iu8Yw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ilnQNJFBNao_d,"officially cancel (a decree, decision, or promise).",description,,0,,revoke,ilnQNJFBNao_w,defines_word,word-description-dataset_v1.1.csv,0,0
+iLsdj7Jf6MQ_d,to lose the determination to oppose something; to accept defeat,description,,0,,succumb,iLsdj7Jf6MQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+iQh2Ly1TSpQ_d,to walk around slowly in a relaxed way or without any clear purpose or direction.,description,,0,,wander,iQh2Ly1TSpQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+IsJNIZuIWrk_d,to represent or show something in a picture or story,description,,0,,depict,IsJNIZuIWrk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+iubciNlbhh8_d,"secured loans, debts, etc. involve an agreement for the lender to take particular assets from the borrower if the money is not paid back",description,,0,,secured,iubciNlbhh8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+iZ48KAEeNMI_d,a strong feeling of wanting something,description,,0,,craving,iZ48KAEeNMI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+J1xPH6Rugio_d,to make use of something,description,,0,,avail of,J1xPH6Rugio_w,defines_word,word-description-dataset_v1.1.csv,0,0
+j256zuxyfwI_d,To imagine or expect that something will happen,description,,0,,anticipate,j256zuxyfwI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+j3cflScQLfo_d,relating to how good or bad something is,description,,0,,qualitative,j3cflScQLfo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+j60L0ng_gGs_d,"having no doubt or knowing exactly that something is true, or known to be true, correct, exact, or effective",description,,0,,certain,j60L0ng_gGs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+j8-wc_TJVAQ_d,"to order, limit, or rule something, or someone's actions or behavior.",description,,0,,control,j8-wc_TJVAQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+jE5xC_IBFVM_d,"nervous and worried, sometimes showing this through sudden movements or movements that do not appear smooth or relaxed.",description,,0,,twitchy,jE5xC_IBFVM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+JHTL19FXRDs_d,very shocked or surprised,description,,0,,stunned,JHTL19FXRDs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+jIpDX-xNPI4_d,the cell that is formed when a female reproductive cell and a male reproductive cell join,description,,0,,zygote,jIpDX-xNPI4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+jk1P2yRbrEA_d,not expected,description,,0,,unexpected,jk1P2yRbrEA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+jkNrqIsk3v0_d,"to order someone to come to or be present at a particular place, or to officially arrange a meeting of people",description,,0,,summon,jkNrqIsk3v0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+JNhM-G9lIKQ_d,to make someone feel worried or angry,description,,0,,agitate,JNhM-G9lIKQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+jO3GFm_acBs_d,separated by a distance or by time.,description,,0,,apart,jO3GFm_acBs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Jq3XIYZKLPc_d,"the number 1,000,000",description,,0,,million,Jq3XIYZKLPc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Jr3c4UUVf0I_d,"to end a speech, meeting, or piece of writing",description,,0,,conclude,Jr3c4UUVf0I_w,defines_word,word-description-dataset_v1.1.csv,0,0
+-jTNHftz4Pk_d,to express strong criticism or disapproval,description,,0,,censure,-jTNHftz4Pk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+JyqULf1GsxQ_d,"having or involving several parts, elements, or members",description,,0,,multiple,JyqULf1GsxQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+jYVESnkt5pc_d,"the quality of being true, honest, or accurate",description,,0,,veracity,jYVESnkt5pc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+kA8MCHBN9tE_d,without any doubts or feeling uncertain; total,description,,0,,unreserved - 1,kA8MCHBN9tE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+KAAJ7HSglDA_d,very bad,description,,0,,abysmal,KAAJ7HSglDA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+KH9awHgg9Uw_d,to try to learn a lot very quickly before an exam,description,,0,,cram,KH9awHgg9Uw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+KI9kybD4Jig_d,a situation in which two people or groups of people become friendly again after they have argued,description,,0,,reconciliation,KI9kybD4Jig_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Kiokngu9sGI_d,fixed in place and impossible to move.,description,,0,,immovable,Kiokngu9sGI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+KiOQbd1JaDg_d,"to choose, find, or recognize something or someone in a group",description,,0,,pick out,KiOQbd1JaDg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+kJA8CfMH3Kg_d,to show that something is very important or worth giving attention to,description,,0,,emphasize,kJA8CfMH3Kg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+KJrJbhqosag_d,"the reason for pain, worry, or a problem",description,,0,,matter,KJrJbhqosag_w,defines_word,word-description-dataset_v1.1.csv,0,0
+KMBGtVdcDzE_d,A person who loves reading and keeping books.,description,,0,,bibliophile,KMBGtVdcDzE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+KQpXEZpNF1s_d,completely or in total,description,,0,,altogether,KQpXEZpNF1s_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ksOfiEDqudU_d,able to use both hands equally well.,description,,0,,ambidextrous,ksOfiEDqudU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ktRQjBfCn-U_d,"Meditation is the act of remaining in a silent and calm state for a period of time, so that you are more able to deal with the problems of everyday life.",description,,0,,meditation,ktRQjBfCn-U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+kxz4AA9lNmY_d,a person who stops other people from enjoying themselves,description,,0,,spoilsport,kxz4AA9lNmY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+l4B2uplSuiE_d,to fill something up again,description,,0,,replenish,l4B2uplSuiE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+L86y2iRJHOU_d,"a group of countries, political parties, or people who have agreed to work together because of shared interests or aims",description,,0,,alliance,L86y2iRJHOU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+LAPxQ3yABkc_d,"If a physical or emotional feeling ebbs, it becomes less strong or disappears",description,,0,,ebb,LAPxQ3yABkc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+_LbRJ0WIQOE_d,"more, extra, or additional; - far",description,,0,,further,_LbRJ0WIQOE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+lcEDzDxpGvU_d,to help,description,,0,,assist,lcEDzDxpGvU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+LGGt1vquKd4_d,easily annoyed and complaining,description,,0,,grumpy,LGGt1vquKd4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+lHnwkx0eTwM_d,"A line of people, usually standing or in cars, waiting for something.",description,,0,,queue,lHnwkx0eTwM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+LKlGF65Xgm0_d,to grow or develop successfully,description,,0,,flourish,LKlGF65Xgm0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+LKYengAeduU_d,"to not do something, especially something enjoyable that you think might be bad",description,,0,,abstain,LKYengAeduU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+LlT0Hf_hRIM_d,to work hard.,description,,0,,toil,LlT0Hf_hRIM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+LPy4fvBaiOc_d,a slight argument,description,,0,,tiff,LPy4fvBaiOc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+lth5T4A_6Bw_d,the freedom to live as you wish or go where you want.,description,,0,,liberty,lth5T4A_6Bw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+m1cbIXJlyQo_d,a story or a description of a series of events,description,,0,,narrative,m1cbIXJlyQo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Ma9iyrOrJA0_d,"to start living in a place where you intend to stay for a long time, usually with your partner.",description,,0,,settle down,Ma9iyrOrJA0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mb920DFo394_d,necessary or needed,description,,0,,essential,mb920DFo394_w,defines_word,word-description-dataset_v1.1.csv,0,0
+MDCsV2GLVis_d,"a way of thinking about something, especially expressed in a publicly stated opinion",description,,0,,stance,MDCsV2GLVis_w,defines_word,word-description-dataset_v1.1.csv,0,0
+MF29ZLOnNHc_d,"policies, behaviours, rules, etc. that result in a continued unfair advantage to some people and unfair or harmful treatment of others based on race",description,,0,,racism,MF29ZLOnNHc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mfp9Jb5pfEY_d,an abstract idea.,description,,0,,concept,mfp9Jb5pfEY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+MFZJTpIvwio_d,not far away,description,,0,,nearby,MFZJTpIvwio_w,defines_word,word-description-dataset_v1.1.csv,0,0
+MGRLpUCM6No_d,"to become dry, smaller, and covered with lines as if by crushing or folding, or to make something do this.",description,,0,,shrivel,MGRLpUCM6No_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Miy-F4TYnso_d,a business that represents one group of people when dealing with another group,description,,0,,agency,Miy-F4TYnso_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mR2b0PyRTN8_d,"a substance, especially salt or pepper, that is added to food to improve its flavour",description,,0,,seasoning,mR2b0PyRTN8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Mt3ApRf_B8I_d,"think about (something) carefully, especially before making a  decision or reaching a conclusion.",description,,0,,ponder,Mt3ApRf_B8I_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mtVcZlcW_sg_d,of very bad quality,description,,0,,atrocious,mtVcZlcW_sg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mUHIG52DXPY_d,a way of doing an activity that needs skill.,description,,0,,technique,mUHIG52DXPY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mutZAFDJmKI_d,to go to the place that someone is leaving from in order to say goodbye to them,description,,0,,see off,mutZAFDJmKI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mvsesnKooAA_d,"a period when you are estranged from someone (= no longer friendly with them), or the fact of no longer being friendly",description,,0,,estrangement,mvsesnKooAA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mwgNw0telVk_d,the door through which you might leave a building or large vehicle,description,,0,,exit,mwgNw0telVk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mxE6dRbd38c_d,an area of interest or activity,description,,0,,realm,mxE6dRbd38c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mxJapRjh1BM_d,impossible to break,description,,0,,unbreakable,mxJapRjh1BM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+mzdCh_9o5JA_d,easily annoyed and complaining in a rude way like a child.,description,,0,,petulant,mzdCh_9o5JA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+MzNbsy0wdM0_d,"a group of long, thin fibres (= structures like threads) that carry information or instructions between the brain and other parts of the body",description,,0,,nerve,MzNbsy0wdM0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+N6jpL7uibFI_d,to make someone feel that they want to do something and can do it,description,,0,,inspire,N6jpL7uibFI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+n-9gQsRj0kY_d,going through or stopping at a place on the way to another place,description,,0,,via - 1,n-9gQsRj0kY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+n9TDPKexXzw_d,to provide a person or a place with objects that are necessary for a particular purpose,description,,0,,equip,n9TDPKexXzw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+NaADM_m9FSI_d,to correct something or make something right,description,,0,,rectify,NaADM_m9FSI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+NAFwB3S525c_d,to come from or out of,description,,0,,emanate - 2,NAFwB3S525c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+NCi0-MMvDMU_d,to examine or look for the difference between two or more things.,description,,0,,compare,NCi0-MMvDMU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Nejuqg9XCLE_d,not polite; offensive or embarrassing,description,,0,,rude,Nejuqg9XCLE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+neqDSQkiVI0_d,"to greatly admire a singer or other famous person, to an extent that is unusual",description,,0,,stan,neqDSQkiVI0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+nfhqebRoL08_d,without anyone or anything else being involved or between,description,,0,,direct,nfhqebRoL08_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ngQ5qSIvcQs_d,"unhappy, disappointed, or without hope",description,,0,,dejected,ngQ5qSIvcQs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+NHUAhGE0cMc_d,to give something and be given something else instead,description,,0,,swap,NHUAhGE0cMc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+nk80uUfZnsM_d,"a way of operating, living, or behaving",description,,0,,mode,nk80uUfZnsM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+nnIo6Q41SY0_d,felt or experienced very strongly or in an extreme way.,description,,0,,profound,nnIo6Q41SY0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+NOXLwMVXFu4_d,"to force someone to leave a country, especially someone who has no legal right to be there or who has broken the law",description,,0,,deport,NOXLwMVXFu4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+nq9PduKLbQc_d,(a situation causing) difficulty or trouble,description,,0,,hassle,nq9PduKLbQc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Nu_XEya-gQA_d,extreme rudeness without any ability to understand that your behaviour is not acceptable to other people,description,,0,,effrontery,Nu_XEya-gQA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+NZP5L3c_-kw_d,a flying weapon that has its own engine so that it can travel a long distance before exploding at the place that it has been aimed at,description,,0,,missile,NZP5L3c_-kw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+o5hP6kJSiyY_d,a large group of people,description,,0,,horde,o5hP6kJSiyY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+O6Rvpy2XFfY_d,"a combination of style and energetic confidence, especially in performances or manner",description,,0,,elan,O6Rvpy2XFfY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OaP4MPsTaPI_d,all of; entire.,description,,0,,whole,OaP4MPsTaPI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ocCEVsLOjVo_d,to say or do something to someone that is rude or offensive.,description,,0,,insult,ocCEVsLOjVo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oCXHxL16lGg_d,an amount or supply that is not large enough,description,,0,,dearth,oCXHxL16lGg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oDXfCEi7hPs_d,the way you feel at a particular time,description,,0,,mood,oDXfCEi7hPs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OEimyhS2v48_d,to make something known or tell people about something officially.,description,,0,,announce,OEimyhS2v48_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oGa_MzmEhfE_d,A bad-tempered person becomes angry and annoyed easily.,description,,0,,bad tempered,oGa_MzmEhfE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OGHkRmbVr3Y_d,"the way in which people in a particular area, country, or social group pronounce words",description,,0,,accent,OGHkRmbVr3Y_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oGNdvacriUo_d,take (something) away or off from the position occupied.,description,,0,,remove,oGNdvacriUo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OjdtxDlr1-Y_d,"a person or group of people with less power, money, etc. than the rest of society",description,,0,,underdog - 1,OjdtxDlr1-Y_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ojXO5l3LfoM_d,close to a particular number or time although not exactly that number or time.,description,,0,,approximately,ojXO5l3LfoM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OkXcKTEeDrA_d,"a wide road with trees or tall buildings on both sides, or a wide country path or road with trees on both sides",description,,0,,avenue,OkXcKTEeDrA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OLodODJ-AVU_d,approval or support of someone or something,description,,0,,favor,OLodODJ-AVU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oM71coRMGt0_d,next to and touching or being supported by (something),description,,0,,against,oM71coRMGt0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OmSt-ldl6_A_d,"to plan, prepare for, or organize something.",description,,0,,arrange,OmSt-ldl6_A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ON6mteoL6yg_d,"a form of energy that can be produced in several ways and that provides power to devices that create light, heat, etc.",description,,0,,electricity,ON6mteoL6yg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OpaA62WVcgE_d,a short journey either to take a message or to take or collect something.,description,,0,,errand,OpaA62WVcgE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Opb1diw9DCg_d,"having the habit of talking a lot, especially about things that are not important",description,,0,,garrulous,Opb1diw9DCg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oS9czmlqK6w_d,"to, at, or in all places or the whole of a place",description,,0,,everywhere,oS9czmlqK6w_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oSdM1ORpL8M_d,extremely happy about something,description,,0,,thrilled,oSdM1ORpL8M_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OSLoq6bVLTQ_d,One who gives money or help to another person or cause,description,,0,,benefactor,OSLoq6bVLTQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OtlvzXZG_Uk_d,said in a clear and short way; expressing what needs to be said without unnecessary words,description,,0,,succinct,OtlvzXZG_Uk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OULWYgqS9ek_d,"to refuse to allow something, especially officially, or to prevent a particular plan of action by making it impossible",description,,0,,forbid,OULWYgqS9ek_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OuZjUm2yUB0_d,"(a person) not identified by name, of unknown name",description,,0,,anonymous,OuZjUm2yUB0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+oVfapt2bBrc_d,to mention someone or something in a brief or indirect way,description,,0,,allude,oVfapt2bBrc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+OxT5AZYe8uE_d,the ability to hold or deal with a larger number of people or things than is needed at the present time,description,,0,,excess capacity,OxT5AZYe8uE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pB3y-OgdVc4_d,to cause something to begin,description,,0,,initiate,pB3y-OgdVc4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pBU_tMBIM9E_d,to stop something from happening or someone from doing something,description,,0,,thwart,pBU_tMBIM9E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+PcQgB9TbATk_d,"the work needed to keep a road, building, machine, etc. in good condition.",description,,0,,maintenance,PcQgB9TbATk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+PePhMa1tOYg_d,to change or develop gradually,description,,0,,evolve,PePhMa1tOYg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+peySczycRYU_d,an extremely strong wish to get or keep money or possessions,description,,0,,avarice,peySczycRYU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pF4RDfnu2gs_d,"to leave a room, building, chair, etc. so that it is available for  other people",description,,0,,vacate,pF4RDfnu2gs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+p_FimVLJQOk_d,temporarily quiet and not active,description,,0,,quiescent,p_FimVLJQOk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pFobpDoNLnM_d,easily annoyed by someone's mistakes or. because you have to wait,description,,0,,impatient,pFobpDoNLnM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pgdu5wisL_g_d,"a remark that expresses approval, admiration, or respect",description,,0,,compliment,pgdu5wisL_g_w,defines_word,word-description-dataset_v1.1.csv,0,0
+piaQCUPYog8_d,lacking interest or excitement; dull.,description,,0,,mundane,piaQCUPYog8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pIMJHKULH9U_d,"to intentionally annoy and upset someone by making unkind remarks to them, laughing unkindly at them, etc.",description,,0,,taunt,pIMJHKULH9U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pIU3UECqksw_d,a loud argument or disagreement,description,,0,,altercation,pIU3UECqksw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+PK8Xkko03cs_d,"to promise or tell something to someone confidently or firmly, or to cause someone to feel certain by removing doubt",description,,0,,assure,PK8Xkko03cs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pKSDna_7WYE_d,in a way that is complete and not limited in any way,description,,0,,unconditionally,pKSDna_7WYE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pkYmIpVgB2A_d,a belief or idea,description,,0,,notion,pkYmIpVgB2A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pmwPef49KGE_d,friendly and making you feel happy and welcome,description,,0,,convivial,pmwPef49KGE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pQfkhE7-uoA_d,"to say that someone has done something morally wrong, illegal, or unkind",description,,0,,accuse,pQfkhE7-uoA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+PsaESG5ARyc_d,to do or be better than,description,,0,,surpass,PsaESG5ARyc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pTIJ-8yubFs_d,someone who advises people on a particular subject,description,,0,,consultant,pTIJ-8yubFs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ptj3ND19s68_d,to put down or drop something in a careless way,description,,0,,dump,ptj3ND19s68_w,defines_word,word-description-dataset_v1.1.csv,0,0
+PV4FwYxTHwo_d,Showing that you find a bad or difficult situation slightly funny.,description,,0,,wry,PV4FwYxTHwo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pWXcMusN_mw_d,to make an exact copy of something,description,,0,,duplicate,pWXcMusN_mw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Px3YHp0J81U_d,nervous; not calm,description,,0,,edgy,Px3YHp0J81U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+PX8yyGWh_7k_d,"bad luck, or an unlucky event",description,,0,,misfortune,PX8yyGWh_7k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pXieXJmVbdg_d,making you remember or imagine something pleasant,description,,0,,evocative,pXieXJmVbdg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+pY5phP_7ebg_d,act or work as a shill.,description,,0,,shill,pY5phP_7ebg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Py6-Ah38uGE_d,the money that you pay for a journey in a vehicle such as a bus or train,description,,0,,fare,Py6-Ah38uGE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Q26Pd5kro4c_d,to step awkwardly while walking or running and fall or begin to fall,description,,0,,stumble,Q26Pd5kro4c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+q7Pv3BNT4bI_d,to make someone do or believe something by giving them a good reason to do it or by talking to that person and making them believe it,description,,0,,persuade,q7Pv3BNT4bI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Q95GDH2EpT4_d,to notice that a particular thing or person exists or is present,description,,0,,conscious,Q95GDH2EpT4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Qa_xoeJIJBs_d,to start to be,description,,0,,become,Qa_xoeJIJBs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+QDmv8QlSYq8_d,"arriving, doing something, or happening at the expected, correct time; not late",description,,0,,punctual,QDmv8QlSYq8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qFQQdsa_uhI_d,"a large amount of money, goods, property, etc.",description,,0,,fortune,qFQQdsa_uhI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qGj5J3oI100_d,not either of two things or people,description,,0,,neither,qGj5J3oI100_w,defines_word,word-description-dataset_v1.1.csv,0,0
+QIeft8689iA_d,"to argue forcefully, especially in public, in order to achieve a particular type of change",description,,0,,agitate,QIeft8689iA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qItgIgZzXnc_d,to change your ideas or behaviour to make them suitable for a new situation.,description,,0,,adapt,qItgIgZzXnc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qKlS0wqBfdk_d,"to see, recognize, or understand something that is not clear",description,,0,,discern,qKlS0wqBfdk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Qm_K7rawb5E_d,clearly very much better than what is usual,description,,0,,outstanding,Qm_K7rawb5E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+QMUp3oPcLB8_d,The water was barely dribbling out of the tap.,description,,0,,dribble,QMUp3oPcLB8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+QnhCavVEYCI_d,an act of choosing between two or more possibilities.,description,,0,,choice,QnhCavVEYCI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qpuq0EtCurU_d,"causing very great pain, difficulty, worry, damage, etc.; very serious",description,,0,,severe,qpuq0EtCurU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qpxHigzHK9U_d,"an occasion or situation that makes it possible to do something that you want to do or have to do, or the possibility of doing something.",description,,0,,opportunity,qpxHigzHK9U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+QqMFMk07hbc_d,wishing to become successful in a particular type of job or activity,description,,0,,aspiring,QqMFMk07hbc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qrOofeX8eJ8_d,to not be caught by someone,description,,0,,elude - 2,qrOofeX8eJ8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+QTJhjBJ1YFA_d,a formal party at which important people are welcomed,description,,0,,reception,QTJhjBJ1YFA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qu8giahciI0_d,"to try to make someone do something for you by giving them money, presents, or something else that they want.",description,,0,,bribe,qu8giahciI0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qXGli6f2E14_d,to (cause to) gradually disappear or waste,description,,0,,dissipate,qXGli6f2E14_w,defines_word,word-description-dataset_v1.1.csv,0,0
+qzBaNu4EDrQ_d,"strange, not known, or not understood",description,,0,,mysterious,qzBaNu4EDrQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+R2N4OQE-q3c_d,(used to add information) also and more importantly,description,,0,,moreover,R2N4OQE-q3c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+R58IiIlbEPs_d,"If someone is given permission to do something, they are allowed to do it",description,,0,,permission,R58IiIlbEPs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+R7Mdus_PuVk_d,to feel pleasure because to your own success/ good luck or someone else's failure/bad luck.,description,,0,,gloat,R7Mdus_PuVk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+r7sSMy9iqQA_d,the state of understanding and realizing something,description,,0,,consciousness,r7sSMy9iqQA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+rahU3wO6czo_d,to have as a plan or purpose.,description,,0,,intend,rahU3wO6czo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+rD5qE7Z3QaM_d,to watch what is happening and be careful.,description,,0,,look out,rD5qE7Z3QaM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+rDWLER4CzbI_d,(of an opinion or position) able to be defended successfully or held for a particular period of time,description,,0,,tenable,rDWLER4CzbI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+RIwfym39VVM_d,a person or animal that lives in a particular place,description,,0,,inhabitant,RIwfym39VVM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+rJvU_NOuwRA_d,a restaurant where simple and usually quite cheap meals are served,description,,0,,cafe,rJvU_NOuwRA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+rKV7gMudw_o_d,to say what is going to happen in the future,description,,0,,foretell,rKV7gMudw_o_w,defines_word,word-description-dataset_v1.1.csv,0,0
+rLPUVyQVRb8_d,"a problem for which it is hard to find the answer, especially one which people enjoy trying to solve as a game",description,,0,,brainteaser,rLPUVyQVRb8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+r-ROZtYJq7A_d,Disciplinary bodies or actions are concerned with making sure that people obey rules or regulations and that they are punished if they do not.,description,,0,,disciplinary,r-ROZtYJq7A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+RY2eefQqXvs_d,the point in the sky directly above you,description,,0,,zenith,RY2eefQqXvs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+rzrll2_y7Xk_d,to delay doing something,description,,0,,procrastinate,rzrll2_y7Xk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+s3zBxbzJNkg_d,"the giving of money, food, or help to those who need it, or an organization that does this",description,,0,,charity,s3zBxbzJNkg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+s5ev9o9-Hj4_d,to keep a group of people interested or enjoying themselves,description,,0,,entertain,s5ev9o9-Hj4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+s7OirsqV-oM_d,a number of things of the same type fastened together or in a close group,description,,0,,bunch,s7OirsqV-oM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+S9qHBdiXN4U_d,"the use of drugs, exercises, etc. to cure a person of an illness or injury.",description,,0,,treatment,S9qHBdiXN4U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+scJSFdl6vqk_d,a state of not being able to decide what to do about a situation in which you are involved,description,,0,,quandary,scJSFdl6vqk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+sdmxMoHYuoU_d,something that you plan to do or achieve,description,,0,,objective,sdmxMoHYuoU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SdOXUWQqbu0_d,very skilful and quick in the way you think or move,description,,0,,adroit,SdOXUWQqbu0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SEKRNyZ9Sgg_d,causing interest or pleasure,description,,0,,attractive,SEKRNyZ9Sgg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Si3y5f7woD0_d,successful or achieving the results that you want.,description,,0,,effective,Si3y5f7woD0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+skPSZU0gZJE_d,"in great detail, or complete, correct, or true in every way",description,,0,,exact,skPSZU0gZJE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SlQBTWvnHCI_d,"to publicly support or suggest an idea, development, or way of doing something",description,,0,,advocate,SlQBTWvnHCI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SnJUsE4wpr0_d,a situation in which words are left out of a sentence but the sentence can still be understood,description,,0,,ellipsis,SnJUsE4wpr0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+sOeSDdQ8GhM_d,"to allow someone officially to leave somewhere, especially a hospital or a law court",description,,0,,discharge,sOeSDdQ8GhM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+spDHZsNp4RA_d,raise (one's shoulders) and bend the top of one's body forward.,description,,0,,hunch,spDHZsNp4RA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Sq5AE3j8CQY_d,"the process of discussing something with someone in order to reach an agreement with them, or the discussions themselves",description,,0,,negotiation,Sq5AE3j8CQY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SuAbKSNQQVI_d,based on chance rather than being planned or based on reason,description,,0,,arbitrary,SuAbKSNQQVI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+sUGW7VoKw00_d,free from an obligation or liability imposed on others.,description,,0,,exempt,sUGW7VoKw00_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SUP1FI1-y7A_d,"to put yourself or someone else onto the official list of members of a course, college, or group",description,,0,,enrol,SUP1FI1-y7A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SUPU7QRMZw8_d,an opinion that someone offers you about what you should do or how you should act in a particular situation,description,,0,,advice,SUPU7QRMZw8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SVXQA7MYbQg_d,"to leave someone for ever, especially when they need you",description,,0,,forsake,SVXQA7MYbQg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SXy03IAmr_A_d,go somewhere with (someone) as a companion or escort.,description,,0,,accompany,SXy03IAmr_A_w,defines_word,word-description-dataset_v1.1.csv,0,0
+SZa4F8UXb5I_d,unusually great; much more or much better.,description,,0,,phenomenal,SZa4F8UXb5I_w,defines_word,word-description-dataset_v1.1.csv,0,0
+T0waubuK70M_d,very beautiful,description,,0,,ravishing,T0waubuK70M_w,defines_word,word-description-dataset_v1.1.csv,0,0
+T21xaGEl3ks_d,"the group of people together in one place to watch or listen to a play, film, someone speaking, etc.",description,,0,,audience,T21xaGEl3ks_w,defines_word,word-description-dataset_v1.1.csv,0,0
+tatHTjuxlgM_d,to praise someone or something,description,,0,,laud,tatHTjuxlgM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+_Tbcd3_o3-E_d,Because of,description,,0,,owing to,_Tbcd3_o3-E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TC1aFo88yeM_d,a disadvantage or the negative part of a situation,description,,0,,drawback,TC1aFo88yeM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TcnFkuXDCIE_d,(of people or their appearance) very untidy,description,,0,,dishevelled,TcnFkuXDCIE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+tcunPwYlTuU_d,"wanting very much to do or have something, especially something interesting or enjoyable",description,,0,,eager,tcunPwYlTuU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+tdSX75unAh8_d,"to love someone very much, especially in a way that shows a lot of admiration or respect, or to like something very much",description,,0,,adore,tdSX75unAh8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TDZ2Y6Du8Hg_d,"a long search for something that is difficult to find, or an attempt to achieve something difficult",description,,0,,quest,TDZ2Y6Du8Hg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TDztbIZLUPI_d,to touch someone or something gently and usually repeatedly with the hand flat,description,,0,,pat,TDztbIZLUPI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+thB4bYtMedE_d,"expressing disapproval, or suggesting that something is not good or is of no importance",description,,0,,pejorative,thB4bYtMedE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TheDJtPZdzQ_d,to say that you will not do or accept something,description,,0,,refuse,TheDJtPZdzQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+T_IbLgT7PhE_d,not interesting or exciting in any way,description,,0,,dull,T_IbLgT7PhE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TivYFPrGSNg_d,believing or expressing the belief that there should be great or extreme social or political change,description,,0,,radical,TivYFPrGSNg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+tjgCta6iTgs_d,"a place where trials and other legal cases happen, or the people present in such a place, especially the officials and those deciding if someone is guilty",description,,0,,court,tjgCta6iTgs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+tkEw7dEAKBM_d,"not large in size or amount, or not expensive",description,,0,,modest,tkEw7dEAKBM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Tm6YgG2d8Nk_d,the process of getting something,description,,0,,acquisition,Tm6YgG2d8Nk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Tnqdxu8niOQ_d,to allow something,description,,0,,permit,Tnqdxu8niOQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TOZ-mgzwrNg_d,someone who has committed a crime or done something wrong,description,,0,,culprit,TOZ-mgzwrNg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+TRfzwAigL2w_d,"(usually of a person or animal with short legs and a fat body) to walk with short steps, moving the body from one side to the other",description,,0,,waddle,TRfzwAigL2w_w,defines_word,word-description-dataset_v1.1.csv,0,0
+t-XEXfbVUps_d,to copy something achieved by someone else and try to do it as well as they have,description,,0,,emulate,t-XEXfbVUps_w,defines_word,word-description-dataset_v1.1.csv,0,0
+tz0m5R2Tfeo_d,An attractively arranged bunch of flowers given as a present or to welcome someone.,description,,0,,bouquet,tz0m5R2Tfeo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+T_Z98eebOH4_d,"something that exists and can be seen, felt, tasted, etc., especially something unusual or interesting",description,,0,,phenomenon,T_Z98eebOH4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+u2-wesZwy0Y_d,"a sound or sounds, especially when it is unwanted, unpleasant, or loud",description,,0,,noise,u2-wesZwy0Y_w,defines_word,word-description-dataset_v1.1.csv,0,0
+u4gQJ4QACkk_d,unselfish interest in the welfare of others,description,,0,,altruism,u4gQJ4QACkk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+u4P-ICTxQdU_d,extremely hungry,description,,0,,ravenous,u4P-ICTxQdU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+u780GxfAR7M_d,easily annoyed or upset,description,,0,,cranky,u780GxfAR7M_w,defines_word,word-description-dataset_v1.1.csv,0,0
+U7QdFuJZyho_d,to reply rudely to someone in authority.,description,,0,,answer back,U7QdFuJZyho_w,defines_word,word-description-dataset_v1.1.csv,0,0
+u8OLvh-F9Y4_d,"relating to human society at a very early stage of development, with people living in a simple way without machines or a writing system",description,,0,,primitive,u8OLvh-F9Y4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+UA5mAv1SmAY_d,"to take something in, especially gradually",description,,0,,absorb,UA5mAv1SmAY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Ub7UcPJ2hLI_d,The absence of government or control in a society.,description,,0,,anarchy,Ub7UcPJ2hLI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+U-c1RT4IfL8_d,feeling guilty or embarrassed about something you have done or about a quality in your character,description,,0,,ashamed,U-c1RT4IfL8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+uc7UKq81JdM_d,an advertisement,description,,0,,advert,uc7UKq81JdM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ucu7LxTJoBk_d,"correct, exact, and without any mistakes.",description,,0,,accurate,ucu7LxTJoBk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+U-FDYYp3OfI_d,"a picture, short film, song, etc. that tries to persuade people to buy a product or service, or a piece of text that tells people about a job, etc.",description,,0,,advertisement,U-FDYYp3OfI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+uhg87vE3L0k_d,well-mannered; polite.,description,,0,,mannerly,uhg87vE3L0k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+UjoktF-iB80_d,"a person who does not like other people celebrating or enjoying themselves, especially a person who does not like Christmas",description,,0,,grinch,UjoktF-iB80_w,defines_word,word-description-dataset_v1.1.csv,0,0
+uKIi5p4ozh8_d,"to cut with a sharp blade using a quick, strong movement",description,,0,,slash,uKIi5p4ozh8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Ul_l1OSDl7o_d,to surround something,description,,0,,enclose,Ul_l1OSDl7o_w,defines_word,word-description-dataset_v1.1.csv,0,0
+UPof0XUr0kU_d,a plan to show how much money a person or organization will earn and how much they will need or be able to spend,description,,0,,budget,UPof0XUr0kU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+UqCIjGRqdGE_d,"a set of ideas or a plan of what to do in particular situations that has been agreed to officially by a group of people, a business organization, a government, or a political party",description,,0,,policy,UqCIjGRqdGE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+urUO3XFOGFQ_d,"to make someone able to do something, or to make something possible.",description,,0,,enable,urUO3XFOGFQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+uS53DpO-l3k_d,"If someone cheers up, or something cheers someone up, they start to feel happier",description,,0,,cheer up,uS53DpO-l3k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+uVSqiNJCpLc_d,"to officially suggest someone for an election, job, position, or honour",description,,0,,nominate,uVSqiNJCpLc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+UW-QMm1pIsg_d,(An organization) having the freedom to govern itself or control its own affairs.,description,,0,,autonomous,UW-QMm1pIsg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+V3NiqtfUBm4_d,"Conversation that is written for a book, play or film.",description,,0,,dialogue,V3NiqtfUBm4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+V7Dzze8q88I_d,in a way that is completely enthusiastic and without any doubt,description,,0,,wholeheartedly,V7Dzze8q88I_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vA8-Sv3474g_d,to respect and approve of someone or their behaviour,description,,0,,admire,vA8-Sv3474g_w,defines_word,word-description-dataset_v1.1.csv,0,0
+VaRDpQOuvJM_d,extremely eager or interested,description,,0,,avid,VaRDpQOuvJM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+VbCPk-6TqXc_d,The fact of believing something is true without any proof or something that you believe to be true without any proof.,description,,0,,supposition,VbCPk-6TqXc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+VBPM3PMRzO4_d,to refuse to accept or obey something or someone; reject,description,,0,,repudiate,VBPM3PMRzO4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+veDy2PmkmFU_d,"one of the parts of a system, process, or machine.",description,,0,,component,veDy2PmkmFU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+VFVKBO9I0TA_d,"to change something, usually slightly, or to cause the characteristics of something to change",description,,0,,alter,VFVKBO9I0TA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+VFYKgoGhbVc_d,a continuous pain that is unpleasant but not very strong,description,,0,,ache,VFYKgoGhbVc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vG5O-N2If4U_d,despite what has just been said or referred to,description,,0,,nevertheless,vG5O-N2If4U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vhi1ETHILvY_d,relating to where you live or have lived,description,,0,,residential,vhi1ETHILvY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vi-htncM10c_d,connected with thinking or conscious mental processes,description,,0,,cognitive,vi-htncM10c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vJ6-7yqLuL4_d,to avoid doing or stop yourself from doing something,description,,0,,refrain,vJ6-7yqLuL4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vjK0h7XGewE_d,happening or done without delay or very soon after something else,description,,0,,immediate,vjK0h7XGewE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vK4PBDsRZ1E_d,"to move further away into the distance, or to become less clear or less bright",description,,0,,recede,vK4PBDsRZ1E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vlRgT4SgD_s_d,"Having more than one meaning and, so, is unclear",description,,0,,ambiguous,vlRgT4SgD_s_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Vn-G3CrUtrg_d,to consider or judge something in a particular way,description,,0,,deem,Vn-G3CrUtrg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vnOTLize640_d,to confuse someone so much that they do not know what to do,description,,0,,flummox,vnOTLize640_w,defines_word,word-description-dataset_v1.1.csv,0,0
+VnU7dyXgsAo_d,the feeling of being upset or annoyed as a result of being unable to change or achieve something.,description,,0,,frustration,VnU7dyXgsAo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Vov3R-v7roU_d,"to improve the quality, amount, or strength of something",description,,0,,enhance,Vov3R-v7roU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vqIpNYvChdM_d,"An unreserved seat, ticket, etc. is not being kept for a particular person to use",description,,0,,unreserved - 2,vqIpNYvChdM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vqZXHlFxLmA_d,to feel very embarrassed,description,,0,,cringe,vqZXHlFxLmA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vR2vuVANEQk_d,suitable or safe for eating,description,,0,,edible,vR2vuVANEQk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vW6TvgmaRCQ_d,"to accept, admit, or recognize something, or the truth or existence of something.",description,,0,,acknowledge,vW6TvgmaRCQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+vWRDJTCpXa4_d,the action of damaging the reputation of a person or group by saying or writing bad things about them that are not true,description,,0,,defamation,vWRDJTCpXa4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+W0LkToF-EPw_d,"to have too many of something, or give someone too much to do.",description,,0,,swamp,W0LkToF-EPw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+W1aowPLRU_U_d,the way that someone behaves,description,,0,,behaviour,W1aowPLRU_U_w,defines_word,word-description-dataset_v1.1.csv,0,0
+-W3Sefpg9l4_d,"clothes, especially of a particular or formal type",description,,0,,attire,-W3Sefpg9l4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+W4qJmEBZr8c_d,"a piece of jewellery, usually one of a pair, worn in a hole in the ear or fastened to the ear by a clip",description,,0,,earring,W4qJmEBZr8c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WA9EuH-2ejw_d,"to try very hard to do something or to make something happen, especially for a long time or against difficulties",description,,0,,strive,WA9EuH-2ejw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WabgM-SmPzU_d,a person who is competing to get a job or elected position,description,,0,,candidate,WabgM-SmPzU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WAzBIGcdzSY_d,to do something unexpected that surprises and sometimes worries a person or animal,description,,0,,startle,WAzBIGcdzSY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WerZ1Hp6IDA_d,Cancel,description,,0,,call off,WerZ1Hp6IDA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wgBGl8jJQZQ_d,the act of observing something or someone.,description,,0,,observation,wgBGl8jJQZQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wIZfRACbuPo_d,a (usually religious) ceremony for burying or burning the body of a dead person,description,,0,,funeral,wIZfRACbuPo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WkIcB2CD204_d,"energetic physical exercises, often performed with a group of people to music, that make the heart, lungs, and muscles stronger and increase the amount of oxygen in the blood",description,,0,,aerobics,WkIcB2CD204_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wlREzbqyvA8_d,"the importance and value that a person has, that makes other people respect them or makes them respect themselves",description,,0,,dignity,wlREzbqyvA8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wNX5EJHUES0_d,"expressing welcome, approval, or pleasure in a way that shows very strong feeling",description,,0,,effusive,wNX5EJHUES0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wNZIAo8zLP0_d,"to fasten, join, or connect something",description,,0,,attach,wNZIAo8zLP0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WOBBWh9xyBM_d,(of a problem or difficulty) complicated and difficult to solve.,description,,0,,knotty,WOBBWh9xyBM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wOiOzVPmwiQ_d,spraise and approval,description,,0,,accolade,wOiOzVPmwiQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wOz6mUwMyeY_d,to remove something intentionally,description,,0,,efface,wOz6mUwMyeY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wrKYlMGgRRQ_d,friendly and pleasant,description,,0,,congenial,wrKYlMGgRRQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wSC4sek05uo_d,expressing strong opinions very directly without worrying if other people are offended,description,,0,,outspoken,wSC4sek05uo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WX4SAl0w4fA_d,feeling ashamed or shy,description,,0,,embarrassed,WX4SAl0w4fA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+w_xCnJVyPYA_d,"to cause someone who has done something wrong or committed a crime to suffer, by hurting them, forcing them to pay money, sending them to prison, etc.",description,,0,,punish,w_xCnJVyPYA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+WxvaqYD62e4_d,similar or related,description,,0,,kindred,WxvaqYD62e4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+wZ8tqkmf1kQ_d,A chance that something may happen or be true,description,,0,,possibility,wZ8tqkmf1kQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+X2H5laZ8PFo_d,a feeling of hate and continuing anger about something in the past,description,,0,,rancour,X2H5laZ8PFo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+X5Fy2cQbje4_d,"an unusual, exciting, and possibly dangerous activity, such as a trip or experience, or the excitement produced by such an activity",description,,0,,adventure,X5Fy2cQbje4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+X7W6YeT2JZk_d,to make something or someone holy,description,,0,,sanctify,X7W6YeT2JZk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Xfo1PMZRuQM_d,to consider or have an opinion about something or someone,description,,0,,regard,Xfo1PMZRuQM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+xGBTymkkD5w_d,"(of part of the body) painful, sore, or uncomfortable when touched.",description,,0,,tender,xGBTymkkD5w_w,defines_word,word-description-dataset_v1.1.csv,0,0
+xhDEUCqqW9s_d,a person who buys goods or a service,description,,0,,customer,xhDEUCqqW9s_w,defines_word,word-description-dataset_v1.1.csv,0,0
+XNGLow435p8_d,to move back because of fear or disgust (= dislike or disapproval),description,,0,,recoil,XNGLow435p8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+xnrRwCGEhDY_d,"using a particular machine, system, or person to send or receive something",description,,0,,via - 2,xnrRwCGEhDY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+xPfNGGJqSaA_d,to find a way in which two situations or beliefs that are opposed to each other can agree and exist together,description,,0,,reconcile,xPfNGGJqSaA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+xsnL27VAyOI_d,make (something) look more attractive by adding extra items or images to it,description,,0,,decorate,xsnL27VAyOI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+XYAkPuNj0Q8_d,suitable for your purposes and needs and causing the least difficulty,description,,0,,convenient,XYAkPuNj0Q8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Y30FYoIqv30_d,to play and behave in a happy way,description,,0,,frolic,Y30FYoIqv30_w,defines_word,word-description-dataset_v1.1.csv,0,0
+y3r4z0Pl-Fs_d,A fetching person or piece of clothing is attractive,description,,0,,fetching,y3r4z0Pl-Fs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+y6F2pI1SO1g_d,to be willing or likely to do something,description,,0,,disposed,y6F2pI1SO1g_w,defines_word,word-description-dataset_v1.1.csv,0,0
+y6GXb6WSuCU_d,"willing to accept behaviour and beliefs that are different from your own, although you might not agree with or approve of them",description,,0,,tolerant,y6GXb6WSuCU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Y92FGx2FIMM_d,"the unjust or prejudicial treatment of different categories of people, especially on the grounds of race, age, sex, or disability.",description,,0,,discrimination,Y92FGx2FIMM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+YaFdfkMozE4_d,"to start to suffer from an illness, especially one that is not serious",description,,0,,come down with,YaFdfkMozE4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yAGtGxfc6fs_d,"recently made for the first time, but not always an improvement on what existed before",description,,0,,newfangled,yAGtGxfc6fs_w,defines_word,word-description-dataset_v1.1.csv,0,0
+YAw1Dsv2_Jo_d,failure to do what you should do,description,,0,,dereliction,YAw1Dsv2_Jo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yCHXjHNktm0_d,"to laugh repeatedly in a quiet but uncontrolled way, often at something silly or rude or when you are nervous",description,,0,,giggle,yCHXjHNktm0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yEOJ__raMkY_d,to wait calmly for a good opportunity to do something,description,,0,,bide your time,yEOJ__raMkY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Yf5qwMvpGs0_d,"a connection between two pieces of electronic equipment, or between a person and a computer",description,,0,,interface,Yf5qwMvpGs0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+YHo9rHrUGP8_d,the feeling you get from being in a particular place or situation or from being with a particular person,description,,0,,vibes,YHo9rHrUGP8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yLYWaEPYJXE_d,an untidy pile or mass of things,description,,0,,heap,yLYWaEPYJXE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+YnvT2TZt17c_d,a false reason that you give to explain why you do something,description,,0,,excuse,YnvT2TZt17c_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ypGaWed2-4o_d,"(of a part of the body) swollen, and larger in size than normal",description,,0,,tumid,ypGaWed2-4o_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yT_roL9ern0_d,"exciting, especially because a lot of people are present and a lot of things are happening",description,,0,,buzzy,yT_roL9ern0_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Y-uc0ngCjrk_d,to do something to correct or improve something that is wrong,description,,0,,remedy,Y-uc0ngCjrk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+YuEOgnEL5-M_d,to force someone to do something,description,,0,,compel,YuEOgnEL5-M_w,defines_word,word-description-dataset_v1.1.csv,0,0
+YuqMCQusc9I_d,"to make a short sudden movement, or to cause someone or something to do this.",description,,0,,jerk,YuqMCQusc9I_w,defines_word,word-description-dataset_v1.1.csv,0,0
+YuvVH90llzw_d,a feeling of doubt or worry about a future event,description,,0,,misgiving,YuvVH90llzw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Yxi3agAUBXQ_d,to put someone or something into a lower or less important rank or position,description,,0,,relegate,Yxi3agAUBXQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yxme3eH9KiI_d,to consider an idea or plan carefully before making a decision,description,,0,,think over,yxme3eH9KiI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yy5l6mYvqIg_d,"If you fulfill something such as a promise, dream, or hope, you do what you said or hoped you would do.",description,,0,,fulfil,yy5l6mYvqIg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+yYAuTrPtnxc_d,Worried.,description,,0,,concerned,yYAuTrPtnxc_w,defines_word,word-description-dataset_v1.1.csv,0,0
+y_zV7Qkiyeo_d,the act of looking at or considering something carefully in order to discover something,description,,0,,examination,y_zV7Qkiyeo_w,defines_word,word-description-dataset_v1.1.csv,0,0
+_z-285qczGg_d,"to watch several episodes (= separate parts) of a television series or programme, one after another",description,,0,,binge-watch,_z-285qczGg_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Z30Ak743EEM_d,to go somewhere or do something quickly,description,,0,,zap,Z30Ak743EEM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Z5lCjz9u0c4_d,"If you carry on doing something, you continue to do it.",description,,0,,carry on,Z5lCjz9u0c4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Z8hLyxzQwK4_d,"a question, often expressing doubt about something or looking for an answer from an authority.",description,,0,,query,Z8hLyxzQwK4_w,defines_word,word-description-dataset_v1.1.csv,0,0
+z9dv8_dss7E_d,"a person who has very strong opinions about something, and tries to make other people have them too",description,,0,,zealot,z9dv8_dss7E_w,defines_word,word-description-dataset_v1.1.csv,0,0
+zAx6PRxBMaM_d,to make a bad situation worse,description,,0,,aggravation,zAx6PRxBMaM_w,defines_word,word-description-dataset_v1.1.csv,0,0
+zAzM7hFn3kE_d,"to pay, especially money that you owe.",description,,0,,settle,zAzM7hFn3kE_w,defines_word,word-description-dataset_v1.1.csv,0,0
+zdwZy6pMJwk_d,"to agree that something is true, especially unwillingly.",description,,0,,admit,zdwZy6pMJwk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ZEZpV4qEQDw_d,to look like or be like someone or something.,description,,0,,resemble,ZEZpV4qEQDw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Zfvba8MyFPY_d,the people or company that make something,description,,0,,maker,Zfvba8MyFPY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+z_H7F89q_Kw_d,to cause great damage to something,description,,0,,ravage,z_H7F89q_Kw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ZjGAKalxAYU_d,"to show, express, or be a sign of something",description,,0,,reflect,ZjGAKalxAYU_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ZkPqEGgCxaY_d,"the act of not allowing yourself to have something, especially something you like or want",description,,0,,abnegation,ZkPqEGgCxaY_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ZP09uzf6uF8_d,"knowledge that something exists, or understanding of a situation or subject at the present time based on information or experience.",description,,0,,awareness,ZP09uzf6uF8_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ZPF9GduJXiA_d,someone who loves to keep all their money and is reluctant or unwilling to spend it.,description,,0,,miser,ZPF9GduJXiA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+zpkJNsXgyCk_d,"If you betray someone who loves or trusts you, your actions hurt and disappoint them.",description,,0,,betray,zpkJNsXgyCk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Zpw0RLxTNoA_d,"a person who cannot stop doing or using something, especially something harmful.",description,,0,,addict,Zpw0RLxTNoA_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ZtpWFfDRU3k_d,"a long walk, especially in the countryside",description,,0,,hike,ZtpWFfDRU3k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+zuG7NoktUUk_d,"to interest someone a lot, especially by being, strange and unusual, or mysterious.",description,,0,,intrigue,zuG7NoktUUk_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Zuk10Ula-LI_d,perfectly clean or tidy,description,,0,,immaculate,Zuk10Ula-LI_w,defines_word,word-description-dataset_v1.1.csv,0,0
+Zv9uPzMreHQ_d,to persuade someone or to cause someone to believe something or to do something.,description,,0,,convince,Zv9uPzMreHQ_w,defines_word,word-description-dataset_v1.1.csv,0,0
+zvUzEhxfpnw_d,a commonly believed but false idea,description,,0,,myth,zvUzEhxfpnw_w,defines_word,word-description-dataset_v1.1.csv,0,0
+ZxK9btlGW3k_d,"a change that is made to something, or the process of doing this",description,,0,,revision,ZxK9btlGW3k_w,defines_word,word-description-dataset_v1.1.csv,0,0
+zY6iSs8xJKE_d,"to give a special purpose to a particular area, such as an area in a town",description,,0,,zone,zY6iSs8xJKE_w,defines_word,word-description-dataset_v1.1.csv,0,0
