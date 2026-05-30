@@ -40,3 +40,6 @@ docs/
 
 # Claude local config (not for repo)
 .claude/
+
+
+test/
