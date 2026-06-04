@@ -103,7 +103,7 @@ class VideoTextEmbeddingDataset(Dataset):
 
         keypoints = sample_frames(keypoints, self.max_frames, self.sample_mode)
         embedding_id = int(row["embedding_id"])
-        text_embedding = self.text_embeddings[embedding_id].astype(np.float32, copy=False)
+        text_embedding = self.text_embeddings[embedding_id].astype(np.float32, copy=True)
 
         return {
             "uid": row.get("uid", ""),
