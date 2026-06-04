@@ -222,7 +222,8 @@ class AttentionPool(nn.Module):
 
     def forward(self, x: torch.Tensor, valid_mask: torch.Tensor) -> torch.Tensor:
         scores = self.score(x).squeeze(-1)
-        scores = scores.masked_fill(~valid_mask, -1e9)
+        mask_value = torch.finfo(scores.dtype).min
+        scores = scores.masked_fill(~valid_mask, mask_value)
         weights = torch.softmax(scores, dim=1).unsqueeze(-1)
         return torch.sum(x * weights, dim=1)
 
