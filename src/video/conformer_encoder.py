@@ -284,7 +284,7 @@ class KeypointConformerEncoder(nn.Module):
         pooled = self.pool(x, valid_mask)
         embedding = self.projection(pooled)
         if self.normalize_output:
-            embedding = F.normalize(embedding, dim=-1)
+            embedding = F.normalize(embedding.float(), dim=-1, eps=1e-6)
         return embedding
 
 

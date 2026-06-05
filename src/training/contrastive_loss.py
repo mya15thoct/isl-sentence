@@ -14,10 +14,23 @@ class SymmetricContrastiveLoss(nn.Module):
         text_embeddings: torch.Tensor,
         logit_scale: torch.Tensor,
     ) -> tuple[torch.Tensor, dict[str, float]]:
-        video_embeddings = F.normalize(video_embeddings, dim=-1)
-        text_embeddings = F.normalize(text_embeddings, dim=-1)
+        video_embeddings = torch.nan_to_num(
+            video_embeddings.float(),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        text_embeddings = torch.nan_to_num(
+            text_embeddings.float(),
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+        video_embeddings = F.normalize(video_embeddings, dim=-1, eps=1e-6)
+        text_embeddings = F.normalize(text_embeddings, dim=-1, eps=1e-6)
 
-        logits = logit_scale.exp() * video_embeddings @ text_embeddings.t()
+        scale = logit_scale.float().exp().clamp(max=100.0)
+        logits = scale * video_embeddings @ text_embeddings.t()
         labels = torch.arange(logits.size(0), device=logits.device)
 
         video_to_text = F.cross_entropy(logits, labels)

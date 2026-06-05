@@ -103,6 +103,7 @@ def run_epoch(
 
     totals = {"loss": 0.0, "v2t_acc": 0.0, "t2v_acc": 0.0, "logit_scale": 0.0}
     seen = 0
+    skipped_nonfinite = 0
     start = time()
 
     for step, batch in enumerate(loader, start=1):
@@ -117,6 +118,16 @@ def run_epoch(
         with torch.amp.autocast(device_type=device.type, enabled=use_amp):
             video_embeddings = model(keypoints, lengths)
             loss, metrics = loss_fn(video_embeddings, text_embeddings, logit_scale)
+
+        if not torch.isfinite(loss):
+            skipped_nonfinite += keypoints.size(0)
+            if training:
+                optimizer.zero_grad(set_to_none=True)
+            print(
+                "warning: skipped non-finite loss "
+                f"step={step} rows={seen} uids={batch['uid'][:3]}"
+            )
+            continue
 
         if training:
             assert optimizer is not None
@@ -146,7 +157,11 @@ def run_epoch(
     return {
         key: value / max(seen, 1)
         for key, value in totals.items()
-    } | {"rows": float(seen), "seconds": elapsed}
+    } | {
+        "rows": float(seen),
+        "seconds": elapsed,
+        "skipped_nonfinite": float(skipped_nonfinite),
+    }
 
 
 def main() -> None:
