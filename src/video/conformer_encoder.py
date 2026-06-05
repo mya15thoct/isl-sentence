@@ -141,6 +141,10 @@ class FeedForward(nn.Module):
 class ConformerConvModule(nn.Module):
     def __init__(self, model_dim: int, kernel_size: int = 31, dropout: float = 0.1):
         super().__init__()
+        norm_groups = min(8, model_dim)
+        while model_dim % norm_groups != 0:
+            norm_groups -= 1
+
         self.norm = nn.LayerNorm(model_dim)
         self.pointwise_in = nn.Conv1d(model_dim, model_dim * 2, kernel_size=1)
         self.depthwise = nn.Conv1d(
@@ -150,7 +154,9 @@ class ConformerConvModule(nn.Module):
             padding=kernel_size // 2,
             groups=model_dim,
         )
-        self.batch_norm = nn.BatchNorm1d(model_dim)
+        # Keep the attribute name for checkpoint compatibility, but avoid
+        # BatchNorm running stats because long AMP runs can corrupt them.
+        self.batch_norm = nn.GroupNorm(num_groups=norm_groups, num_channels=model_dim)
         self.pointwise_out = nn.Conv1d(model_dim, model_dim, kernel_size=1)
         self.dropout = nn.Dropout(dropout)
 

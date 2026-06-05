@@ -306,7 +306,7 @@ def main() -> None:
 
     if args.resume_from is not None:
         checkpoint = torch.load(args.resume_from, map_location=device, weights_only=False)
-        model.load_state_dict(checkpoint["model_state"])
+        load_result = model.load_state_dict(checkpoint["model_state"], strict=False)
         optimizer.load_state_dict(checkpoint["optimizer_state"])
         logit_scale.data.copy_(checkpoint["logit_scale"].to(device=device, dtype=torch.float32))
         repaired = sanitize_model_state(model)
@@ -316,6 +316,12 @@ def main() -> None:
             best_val = float(val_loss)
         print(f"resumed from: {args.resume_from}")
         print(f"resume epoch: {start_epoch}")
+        if load_result.missing_keys or load_result.unexpected_keys:
+            print(
+                "warning: checkpoint key mismatch "
+                f"missing={load_result.missing_keys[:10]} "
+                f"unexpected={load_result.unexpected_keys[:10]}"
+            )
         if repaired:
             print(f"warning: repaired checkpoint tensors: {repaired[:10]}")
 
