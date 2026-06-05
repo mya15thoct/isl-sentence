@@ -38,6 +38,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--val-ratio", type=float, default=0.02)
+    parser.add_argument("--early-stop-patience", type=int, default=0)
+    parser.add_argument("--early-stop-min-delta", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-frames", type=int, default=512)
     parser.add_argument(
@@ -303,6 +305,7 @@ def main() -> None:
     loss_fn = SymmetricContrastiveLoss()
     start_epoch = 1
     best_val = float("inf")
+    epochs_without_improvement = 0
 
     if args.resume_from is not None:
         checkpoint = torch.load(args.resume_from, map_location=device, weights_only=False)
@@ -394,8 +397,10 @@ def main() -> None:
             metrics,
             args,
         )
-        if val_metrics["loss"] < best_val:
+        improved = val_metrics["loss"] < best_val - args.early_stop_min_delta
+        if improved:
             best_val = val_metrics["loss"]
+            epochs_without_improvement = 0
             save_checkpoint(
                 args.save_dir / "checkpoint_best.pt",
                 model,
@@ -405,6 +410,17 @@ def main() -> None:
                 metrics,
                 args,
             )
+        else:
+            epochs_without_improvement += 1
+            if args.early_stop_patience > 0:
+                print(
+                    "early-stop "
+                    f"no_improvement={epochs_without_improvement}/"
+                    f"{args.early_stop_patience} best_val={best_val:.4f}"
+                )
+                if epochs_without_improvement >= args.early_stop_patience:
+                    print(f"early stopping at epoch {epoch}")
+                    break
 
 
 if __name__ == "__main__":
