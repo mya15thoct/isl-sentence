@@ -101,9 +101,14 @@ class VideoTextEmbeddingDataset(Dataset):
         if keypoints.ndim != 2 or keypoints.shape[1] != KEYPOINT_DIM:
             raise ValueError(f"Invalid keypoint shape {keypoints.shape}: {row['keypoint_path']}")
 
-        keypoints = sample_frames(keypoints, self.max_frames, self.sample_mode)
+        keypoints = sample_frames(keypoints, self.max_frames, self.sample_mode).astype(
+            np.float32,
+            copy=True,
+        )
+        np.nan_to_num(keypoints, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
         embedding_id = int(row["embedding_id"])
         text_embedding = self.text_embeddings[embedding_id].astype(np.float32, copy=True)
+        np.nan_to_num(text_embedding, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
 
         return {
             "uid": row.get("uid", ""),

@@ -114,7 +114,7 @@ def run_epoch(
             optimizer.zero_grad(set_to_none=True)
 
         use_amp = scaler is not None and scaler.is_enabled()
-        with torch.cuda.amp.autocast(enabled=use_amp):
+        with torch.amp.autocast(device_type=device.type, enabled=use_amp):
             video_embeddings = model(keypoints, lengths)
             loss, metrics = loss_fn(video_embeddings, text_embeddings, logit_scale)
 
@@ -216,7 +216,7 @@ def main() -> None:
         lr=args.lr,
         weight_decay=args.weight_decay,
     )
-    scaler = torch.cuda.amp.GradScaler(enabled=args.amp and device.type == "cuda")
+    scaler = torch.amp.GradScaler(device.type, enabled=args.amp and device.type == "cuda")
     loss_fn = SymmetricContrastiveLoss()
 
     args.save_dir.mkdir(parents=True, exist_ok=True)
