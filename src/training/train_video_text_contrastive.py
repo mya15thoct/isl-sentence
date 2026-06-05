@@ -47,6 +47,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--amp", action="store_true")
+    parser.add_argument("--resume-from", type=Path)
+    parser.add_argument("--skip-nonfinite-batches", action="store_true")
     parser.add_argument("--skip-file-check", action="store_true")
     parser.add_argument("--print-every", type=int, default=50)
     parser.add_argument("--model-dim", type=int, default=256)
@@ -88,6 +90,46 @@ def save_checkpoint(
     )
 
 
+def sanitize_model_state(model: nn.Module) -> list[str]:
+    """Repair non-finite floating point parameters/buffers after a bad batch."""
+    repaired: list[str] = []
+    with torch.no_grad():
+        for name, param in model.named_parameters():
+            if param.is_floating_point() and not torch.isfinite(param).all():
+                repaired.append(name)
+                param.copy_(torch.nan_to_num(param, nan=0.0, posinf=0.0, neginf=0.0))
+
+        for name, buffer in model.named_buffers():
+            if not buffer.is_floating_point() or torch.isfinite(buffer).all():
+                continue
+
+            repaired.append(name)
+            if name.endswith("running_var"):
+                buffer.copy_(torch.nan_to_num(buffer, nan=1.0, posinf=1.0, neginf=1.0))
+                buffer.clamp_(min=1e-6)
+            else:
+                buffer.copy_(torch.nan_to_num(buffer, nan=0.0, posinf=0.0, neginf=0.0))
+
+    return repaired
+
+
+def format_tensor_stats(name: str, tensor: torch.Tensor) -> str:
+    value = tensor.detach()
+    finite = torch.isfinite(value)
+    finite_count = int(finite.sum().item())
+    total = finite.numel()
+    if finite_count == 0:
+        return f"{name}: shape={tuple(value.shape)} finite=0/{total}"
+
+    finite_values = value[finite].float()
+    return (
+        f"{name}: shape={tuple(value.shape)} finite={finite_count}/{total} "
+        f"min={finite_values.min().item():.6g} "
+        f"max={finite_values.max().item():.6g} "
+        f"mean={finite_values.mean().item():.6g}"
+    )
+
+
 def run_epoch(
     model: nn.Module,
     loader: DataLoader,
@@ -97,6 +139,7 @@ def run_epoch(
     optimizer: torch.optim.Optimizer | None,
     scaler: torch.cuda.amp.GradScaler | None,
     print_every: int,
+    skip_nonfinite_batches: bool,
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
@@ -120,12 +163,29 @@ def run_epoch(
             loss, metrics = loss_fn(video_embeddings, text_embeddings, logit_scale)
 
         if not torch.isfinite(loss):
-            skipped_nonfinite += keypoints.size(0)
             if training:
                 optimizer.zero_grad(set_to_none=True)
+            details = "\n".join(
+                [
+                    f"non-finite loss at step={step} rows={seen}",
+                    f"uids={batch['uid']}",
+                    f"texts={batch['text']}",
+                    format_tensor_stats("keypoints", keypoints),
+                    format_tensor_stats("lengths", lengths),
+                    format_tensor_stats("video_embeddings", video_embeddings),
+                    format_tensor_stats("text_embeddings", text_embeddings),
+                    format_tensor_stats("logit_scale", logit_scale),
+                ]
+            )
+            if not skip_nonfinite_batches:
+                raise RuntimeError(details)
+
+            skipped_nonfinite += keypoints.size(0)
+            repaired = sanitize_model_state(model)
             print(
                 "warning: skipped non-finite loss "
-                f"step={step} rows={seen} uids={batch['uid'][:3]}"
+                f"step={step} rows={seen} uids={batch['uid'][:3]} "
+                f"repaired={repaired[:5]}"
             )
             continue
 
@@ -138,6 +198,14 @@ def run_epoch(
             scaler.step(optimizer)
             scaler.update()
             with torch.no_grad():
+                logit_scale.copy_(
+                    torch.nan_to_num(
+                        logit_scale,
+                        nan=math.log(1 / 0.07),
+                        posinf=math.log(100.0),
+                        neginf=math.log(1.0),
+                    )
+                )
                 logit_scale.clamp_(math.log(1.0), math.log(100.0))
 
         batch_size = keypoints.size(0)
@@ -233,6 +301,23 @@ def main() -> None:
     )
     scaler = torch.amp.GradScaler(device.type, enabled=args.amp and device.type == "cuda")
     loss_fn = SymmetricContrastiveLoss()
+    start_epoch = 1
+    best_val = float("inf")
+
+    if args.resume_from is not None:
+        checkpoint = torch.load(args.resume_from, map_location=device, weights_only=False)
+        model.load_state_dict(checkpoint["model_state"])
+        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        logit_scale.data.copy_(checkpoint["logit_scale"].to(device=device, dtype=torch.float32))
+        repaired = sanitize_model_state(model)
+        start_epoch = int(checkpoint.get("epoch", 0)) + 1
+        val_loss = checkpoint.get("metrics", {}).get("val", {}).get("loss", float("inf"))
+        if math.isfinite(float(val_loss)):
+            best_val = float(val_loss)
+        print(f"resumed from: {args.resume_from}")
+        print(f"resume epoch: {start_epoch}")
+        if repaired:
+            print(f"warning: repaired checkpoint tensors: {repaired[:10]}")
 
     args.save_dir.mkdir(parents=True, exist_ok=True)
     (args.save_dir / "train_config.json").write_text(
@@ -245,8 +330,11 @@ def main() -> None:
     print(f"device     : {device}")
     print(f"save dir   : {args.save_dir}")
 
-    best_val = float("inf")
-    for epoch in range(1, args.epochs + 1):
+    if start_epoch > args.epochs:
+        print(f"checkpoint is already at epoch {start_epoch - 1}; nothing to train.")
+        return
+
+    for epoch in range(start_epoch, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}")
         train_metrics = run_epoch(
             model,
@@ -257,6 +345,7 @@ def main() -> None:
             optimizer,
             scaler,
             args.print_every,
+            args.skip_nonfinite_batches,
         )
         print(
             "train "
@@ -277,6 +366,7 @@ def main() -> None:
                     optimizer=None,
                     scaler=None,
                     print_every=0,
+                    skip_nonfinite_batches=args.skip_nonfinite_batches,
                 )
             print(
                 "val   "
@@ -286,6 +376,9 @@ def main() -> None:
             )
 
         metrics = {"train": train_metrics, "val": val_metrics}
+        repaired = sanitize_model_state(model)
+        if repaired:
+            print(f"warning: repaired model tensors before checkpoint: {repaired[:10]}")
         save_checkpoint(
             args.save_dir / "checkpoint_last.pt",
             model,
