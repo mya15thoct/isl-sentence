@@ -50,6 +50,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--resume-from", type=Path)
+    parser.add_argument(
+        "--init-from",
+        type=Path,
+        help="Initialize model weights from a checkpoint, but start a fresh optimizer/run.",
+    )
     parser.add_argument("--skip-nonfinite-batches", action="store_true")
     parser.add_argument("--skip-file-check", action="store_true")
     parser.add_argument("--print-every", type=int, default=50)
@@ -314,6 +319,26 @@ def main() -> None:
     start_epoch = 1
     best_val = float("inf")
     epochs_without_improvement = 0
+
+    if args.resume_from is not None and args.init_from is not None:
+        raise SystemExit("Use either --resume-from or --init-from, not both.")
+
+    if args.init_from is not None:
+        checkpoint = torch.load(args.init_from, map_location=device, weights_only=False)
+        load_result = model.load_state_dict(checkpoint["model_state"], strict=False)
+        if "logit_scale" in checkpoint:
+            logit_scale.data.copy_(checkpoint["logit_scale"].to(device=device, dtype=torch.float32))
+        repaired = sanitize_model_state(model)
+        print(f"initialized from: {args.init_from}")
+        print(f"init epoch      : {checkpoint.get('epoch')}")
+        if load_result.missing_keys or load_result.unexpected_keys:
+            print(
+                "warning: checkpoint key mismatch "
+                f"missing={load_result.missing_keys[:10]} "
+                f"unexpected={load_result.unexpected_keys[:10]}"
+            )
+        if repaired:
+            print(f"warning: repaired checkpoint tensors: {repaired[:10]}")
 
     if args.resume_from is not None:
         checkpoint = torch.load(args.resume_from, map_location=device, weights_only=False)
