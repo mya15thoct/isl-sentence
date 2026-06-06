@@ -33,6 +33,13 @@ DEFAULTS = {
     "downsample_stride": 4,
     "dropout": 0.1,
 }
+PRETRAINED_ARCH_FIELDS = [
+    "model_dim",
+    "projection_dim",
+    "num_layers",
+    "num_heads",
+    "downsample_stride",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -464,7 +471,7 @@ def main() -> None:
 
     if args.pretrained_checkpoint is not None:
         pretrained_config = read_pretrained_config(args.pretrained_checkpoint)
-        for name in DEFAULTS:
+        for name in PRETRAINED_ARCH_FIELDS:
             if name in pretrained_config:
                 setattr(args, name.replace("-", "_"), cfg_value(pretrained_config, name, getattr(args, name)))
 
