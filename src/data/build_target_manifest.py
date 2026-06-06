@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 from pathlib import Path
+import re
 import sys
 from typing import Iterable
 
@@ -32,7 +33,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build a standard manifest for the 491-video target sentence set.",
     )
-    parser.add_argument("--labels-csv", type=Path, required=True)
+    parser.add_argument(
+        "--labels-csv",
+        type=Path,
+        help="Optional row-level label CSV. If omitted, class labels are read from keypoint subdirectories.",
+    )
     parser.add_argument("--keypoint-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--glosses-csv", type=Path)
@@ -58,6 +63,16 @@ def first_present(row: dict[str, str], candidates: Iterable[str]) -> str:
     return ""
 
 
+def normalize_sentence(value: str) -> str:
+    value = value.strip().lower().replace("_", " ")
+    value = re.sub(r"\s+", " ", value)
+    return value
+
+
+def sentence_from_slug(value: str) -> str:
+    return normalize_sentence(value)
+
+
 def has_candidate_column(row: dict[str, str], candidates: Iterable[str]) -> bool:
     columns = {norm_name(key) for key in row}
     return any(norm_name(candidate) in columns for candidate in candidates)
@@ -72,7 +87,19 @@ def build_gloss_map(path: Path | None) -> dict[str, str]:
         sentence = first_present(row, SENTENCE_COLUMNS)
         gloss = first_present(row, GLOSS_COLUMNS)
         if sentence and gloss:
-            mapping[sentence.strip().lower()] = gloss
+            mapping[normalize_sentence(sentence)] = gloss
+    return mapping
+
+
+def build_sentence_name_map(path: Path | None) -> dict[str, str]:
+    if path is None or not path.is_file():
+        return {}
+
+    mapping: dict[str, str] = {}
+    for row in read_csv(path):
+        sentence = first_present(row, SENTENCE_COLUMNS)
+        if sentence:
+            mapping[normalize_sentence(sentence)] = sentence.strip()
     return mapping
 
 
@@ -114,14 +141,56 @@ def find_keypoint(row: dict[str, str], keypoint_index: dict[str, Path]) -> tuple
     return None, f"not_found:{key}"
 
 
-def main() -> None:
-    args = parse_args()
-    rows = read_csv(args.labels_csv)
-    if not rows:
-        raise SystemExit(f"No rows found in {args.labels_csv}")
+def build_from_class_dirs(
+    keypoint_root: Path,
+    extension: str,
+    gloss_map: dict[str, str],
+    sentence_name_map: dict[str, str],
+) -> list[dict[str, str]]:
+    class_dirs = sorted(path for path in keypoint_root.iterdir() if path.is_dir())
+    if not class_dirs:
+        raise SystemExit(f"No class directories found under {keypoint_root}")
 
-    gloss_map = build_gloss_map(args.glosses_csv)
-    keypoint_index = index_keypoints(args.keypoint_root, args.extension)
+    output_rows: list[dict[str, str]] = []
+    label_id = 0
+    for class_dir in class_dirs:
+        keypoint_files = sorted(class_dir.glob(f"*{extension}"))
+        if not keypoint_files:
+            continue
+
+        slug_sentence = sentence_from_slug(class_dir.name)
+        sentence_key = normalize_sentence(slug_sentence)
+        sentence = sentence_name_map.get(sentence_key, slug_sentence)
+        gloss = gloss_map.get(sentence_key, "")
+        for path in keypoint_files:
+            output_rows.append(
+                {
+                    "sample_id": str(len(output_rows)),
+                    "uid": path.stem,
+                    "sentence": sentence,
+                    "gloss": gloss,
+                    "label_id": str(label_id),
+                    "label_text": sentence,
+                    "keypoint_path": str(path),
+                    "match_method": f"class_dir:{class_dir.name}",
+                }
+            )
+        label_id += 1
+
+    return output_rows
+
+
+def build_from_labels_csv(
+    labels_csv: Path,
+    keypoint_root: Path,
+    extension: str,
+    gloss_map: dict[str, str],
+) -> tuple[list[dict[str, str]], int]:
+    rows = read_csv(labels_csv)
+    if not rows:
+        raise SystemExit(f"No rows found in {labels_csv}")
+
+    keypoint_index = index_keypoints(keypoint_root, extension)
     keypoint_files = sorted({path for path in keypoint_index.values()})
 
     use_sorted_fallback = not has_candidate_column(rows[0], KEY_COLUMNS)
@@ -141,7 +210,7 @@ def main() -> None:
                 f"Could not find sentence/label column. Available columns: {list(row)}"
             )
 
-        gloss = first_present(row, GLOSS_COLUMNS) or gloss_map.get(sentence.strip().lower(), "")
+        gloss = first_present(row, GLOSS_COLUMNS) or gloss_map.get(normalize_sentence(sentence), "")
         if use_sorted_fallback:
             keypoint_path = keypoint_files[idx]
             match_method = "sorted_order"
@@ -165,6 +234,29 @@ def main() -> None:
             }
         )
 
+    return output_rows, missing
+
+
+def main() -> None:
+    args = parse_args()
+    gloss_map = build_gloss_map(args.glosses_csv)
+    sentence_name_map = build_sentence_name_map(args.glosses_csv)
+    missing = 0
+    if args.labels_csv is None:
+        output_rows = build_from_class_dirs(
+            args.keypoint_root,
+            args.extension,
+            gloss_map,
+            sentence_name_map,
+        )
+    else:
+        output_rows, missing = build_from_labels_csv(
+            args.labels_csv,
+            args.keypoint_root,
+            args.extension,
+            gloss_map,
+        )
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
         "sample_id",
@@ -181,11 +273,17 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(output_rows)
 
-    print(f"labels rows     : {len(rows)}")
-    print(f"keypoint files  : {len(keypoint_files)}")
+    class_count = len({row["label_id"] for row in output_rows})
+    missing_gloss = sum(1 for row in output_rows if not row.get("gloss"))
+    if args.labels_csv is not None:
+        print(f"labels csv      : {args.labels_csv}")
+    else:
+        print("labels source   : keypoint class directories")
+    print(f"keypoint root   : {args.keypoint_root}")
     print(f"manifest rows   : {len(output_rows)}")
-    print(f"classes         : {len(class_to_id)}")
+    print(f"classes         : {class_count}")
     print(f"missing keypoint: {missing}")
+    print(f"missing gloss   : {missing_gloss}")
     print(f"output          : {args.output}")
 
 
