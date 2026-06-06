@@ -113,8 +113,10 @@ class VideoTextEmbeddingDataset(Dataset):
         return {
             "uid": row.get("uid", ""),
             "text": row.get("text", ""),
+            "relation_type": row.get("relation_type", ""),
             "keypoints": torch.from_numpy(keypoints),
             "text_embedding": torch.from_numpy(text_embedding),
+            "relation_weight": float(row.get("relation_weight") or 1.0),
             "length": keypoints.shape[0],
         }
 
@@ -126,6 +128,10 @@ def collate_video_text(batch: list[dict[str, object]]) -> dict[str, object]:
 
     keypoints = torch.zeros(len(batch), max_len, feature_dim, dtype=torch.float32)
     text_embeddings = torch.stack([item["text_embedding"] for item in batch]).float()
+    relation_weights = torch.tensor(
+        [float(item.get("relation_weight", 1.0)) for item in batch],
+        dtype=torch.float32,
+    )
 
     for i, item in enumerate(batch):
         x = item["keypoints"]
@@ -134,7 +140,9 @@ def collate_video_text(batch: list[dict[str, object]]) -> dict[str, object]:
     return {
         "uid": [item["uid"] for item in batch],
         "text": [item["text"] for item in batch],
+        "relation_type": [item.get("relation_type", "") for item in batch],
         "keypoints": keypoints,
         "lengths": lengths,
         "text_embeddings": text_embeddings,
+        "relation_weights": relation_weights,
     }

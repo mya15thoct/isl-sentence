@@ -155,6 +155,7 @@ def run_epoch(
         keypoints = batch["keypoints"].to(device, non_blocking=True)
         lengths = batch["lengths"].to(device, non_blocking=True)
         text_embeddings = batch["text_embeddings"].to(device, non_blocking=True)
+        relation_weights = batch["relation_weights"].to(device, non_blocking=True)
 
         if training:
             optimizer.zero_grad(set_to_none=True)
@@ -162,7 +163,12 @@ def run_epoch(
         use_amp = scaler is not None and scaler.is_enabled()
         with torch.amp.autocast(device_type=device.type, enabled=use_amp):
             video_embeddings = model(keypoints, lengths)
-            loss, metrics = loss_fn(video_embeddings, text_embeddings, logit_scale)
+            loss, metrics = loss_fn(
+                video_embeddings,
+                text_embeddings,
+                logit_scale,
+                sample_weights=relation_weights,
+            )
 
         if not torch.isfinite(loss):
             if training:
@@ -172,8 +178,10 @@ def run_epoch(
                     f"non-finite loss at step={step} rows={seen}",
                     f"uids={batch['uid']}",
                     f"texts={batch['text']}",
+                    f"relations={batch.get('relation_type', [])}",
                     format_tensor_stats("keypoints", keypoints),
                     format_tensor_stats("lengths", lengths),
+                    format_tensor_stats("relation_weights", relation_weights),
                     format_tensor_stats("video_embeddings", video_embeddings),
                     format_tensor_stats("text_embeddings", text_embeddings),
                     format_tensor_stats("logit_scale", logit_scale),

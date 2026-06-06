@@ -26,6 +26,15 @@ import numpy as np
 
 
 DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+PASSTHROUGH_FIELDS = [
+    "relation_type",
+    "video_uid",
+    "video_category",
+    "source_text",
+    "relation_weight",
+    "pair_id",
+    "sentence_uid",
+]
 
 
 def read_manifest(path: Path) -> list[dict[str, str]]:
@@ -65,6 +74,7 @@ def load_rows(manifest_paths: list[Path], text_column: str) -> list[dict[str, st
                     "num_frames": row.get("num_frames", "").strip(),
                     "extract_status": row.get("extract_status", "").strip(),
                     "quality_flag": row.get("quality_flag", "").strip(),
+                    **{field: row.get(field, "").strip() for field in PASSTHROUGH_FIELDS},
                 }
             )
 
@@ -126,10 +136,7 @@ def main() -> None:
     config_path = args.output_dir / f"{args.name}_config.json"
 
     np.save(emb_path, embeddings)
-    write_csv(
-        index_path,
-        rows,
-        [
+    fieldnames = [
             "embedding_id",
             "source_manifest",
             "source_row",
@@ -142,8 +149,11 @@ def main() -> None:
             "num_frames",
             "extract_status",
             "quality_flag",
-        ],
-    )
+    ]
+    for field in PASSTHROUGH_FIELDS:
+        if any(row.get(field, "") for row in rows):
+            fieldnames.append(field)
+    write_csv(index_path, rows, fieldnames)
 
     config = {
         "model": args.model,
