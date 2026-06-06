@@ -65,6 +65,7 @@ def first_present(row: dict[str, str], candidates: Iterable[str]) -> str:
 
 def normalize_sentence(value: str) -> str:
     value = value.strip().lower().replace("_", " ")
+    value = re.sub(r"\bcollegeschool\b", "college school", value)
     value = re.sub(r"\s+", " ", value)
     return value
 
