@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.training.keypoint_augmentation import augment_sequence, augmentation_methods
 from src.training.video_text_dataset import KEYPOINT_DIM, sample_frames
 from src.video.conformer_encoder import KeypointConformerEncoder
 
@@ -61,6 +62,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--early-stop-patience", type=int, default=15)
     parser.add_argument("--print-every", type=int, default=20)
+    parser.add_argument("--label-smoothing", type=float, default=0.0)
+    parser.add_argument("--augment", action="store_true")
+    parser.add_argument(
+        "--augment-methods",
+        nargs="+",
+        choices=augmentation_methods(),
+        default=["noise", "subsample", "scale", "crop", "jitter"],
+        help="Train-only keypoint augmentation methods. Temporal reverse is intentionally omitted.",
+    )
+    parser.add_argument("--augment-prob", type=float, default=0.75)
+    parser.add_argument("--train-repeat", type=int, default=1)
+    parser.add_argument("--noise-std", type=float, default=0.01)
+    parser.add_argument("--jitter-std", type=float, default=0.02)
+    parser.add_argument("--subsample-min", type=float, default=0.75)
+    parser.add_argument("--subsample-max", type=float, default=0.95)
+    parser.add_argument("--temporal-scale-min", type=float, default=0.85)
+    parser.add_argument("--temporal-scale-max", type=float, default=1.20)
+    parser.add_argument("--crop-min", type=float, default=0.85)
+    parser.add_argument("--crop-max", type=float, default=0.98)
     parser.add_argument("--model-dim", type=int, default=256)
     parser.add_argument("--projection-dim", type=int, default=384)
     parser.add_argument("--num-layers", type=int, default=4)
@@ -149,16 +169,40 @@ class TargetSentenceDataset(Dataset):
         rows: list[dict[str, str]],
         max_frames: int,
         sample_mode: str,
+        augment: bool = False,
+        augment_methods: list[str] | None = None,
+        augment_prob: float = 0.75,
+        repeat: int = 1,
+        noise_std: float = 0.01,
+        jitter_std: float = 0.02,
+        subsample_min: float = 0.75,
+        subsample_max: float = 0.95,
+        temporal_scale_min: float = 0.85,
+        temporal_scale_max: float = 1.20,
+        crop_min: float = 0.85,
+        crop_max: float = 0.98,
     ) -> None:
         self.rows = rows
         self.max_frames = max_frames
         self.sample_mode = sample_mode
+        self.augment = augment
+        self.augment_methods = augment_methods or []
+        self.augment_prob = augment_prob
+        self.repeat = max(1, repeat)
+        self.noise_std = noise_std
+        self.jitter_std = jitter_std
+        self.subsample_min = subsample_min
+        self.subsample_max = subsample_max
+        self.temporal_scale_min = temporal_scale_min
+        self.temporal_scale_max = temporal_scale_max
+        self.crop_min = crop_min
+        self.crop_max = crop_max
 
     def __len__(self) -> int:
-        return len(self.rows)
+        return len(self.rows) * self.repeat
 
     def __getitem__(self, index: int) -> dict[str, Any]:
-        row = self.rows[index]
+        row = self.rows[index % len(self.rows)]
         keypoints = np.load(row["keypoint_path"]).astype(np.float32, copy=False)
         if keypoints.ndim != 2 or keypoints.shape[1] != KEYPOINT_DIM:
             raise ValueError(f"Invalid keypoint shape {keypoints.shape}: {row['keypoint_path']}")
@@ -167,6 +211,20 @@ class TargetSentenceDataset(Dataset):
             copy=True,
         )
         np.nan_to_num(keypoints, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+        if self.augment:
+            keypoints = augment_sequence(
+                keypoints,
+                methods=self.augment_methods,
+                probability=self.augment_prob,
+                noise_std=self.noise_std,
+                jitter_std=self.jitter_std,
+                subsample_min=self.subsample_min,
+                subsample_max=self.subsample_max,
+                scale_min=self.temporal_scale_min,
+                scale_max=self.temporal_scale_max,
+                crop_min=self.crop_min,
+                crop_max=self.crop_max,
+            )
         return {
             "uid": row.get("uid", ""),
             "label": int(row["label_id"]),
@@ -240,7 +298,23 @@ def make_loaders(
     test_rows: list[dict[str, str]],
     args: argparse.Namespace,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
-    train_dataset = TargetSentenceDataset(train_rows, args.max_frames, args.sample_mode)
+    train_dataset = TargetSentenceDataset(
+        train_rows,
+        args.max_frames,
+        args.sample_mode,
+        augment=args.augment,
+        augment_methods=args.augment_methods,
+        augment_prob=args.augment_prob,
+        repeat=args.train_repeat,
+        noise_std=args.noise_std,
+        jitter_std=args.jitter_std,
+        subsample_min=args.subsample_min,
+        subsample_max=args.subsample_max,
+        temporal_scale_min=args.temporal_scale_min,
+        temporal_scale_max=args.temporal_scale_max,
+        crop_min=args.crop_min,
+        crop_max=args.crop_max,
+    )
     eval_mode = "center" if args.sample_mode == "random" else args.sample_mode
     val_dataset = TargetSentenceDataset(val_rows, args.max_frames, eval_mode)
     test_dataset = TargetSentenceDataset(test_rows, args.max_frames, eval_mode)
@@ -271,6 +345,7 @@ def run_epoch(
     optimizer: torch.optim.Optimizer | None,
     scaler: torch.amp.GradScaler | None,
     print_every: int,
+    label_smoothing: float = 0.0,
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
@@ -291,7 +366,11 @@ def run_epoch(
         use_amp = scaler is not None and scaler.is_enabled()
         with torch.amp.autocast(device_type=device.type, enabled=use_amp):
             logits = model(keypoints, lengths)
-            loss = F.cross_entropy(logits.float(), labels)
+            loss = F.cross_entropy(
+                logits.float(),
+                labels,
+                label_smoothing=label_smoothing,
+            )
 
         if not torch.isfinite(loss):
             raise RuntimeError(f"Non-finite classifier loss at step={step} uids={batch['uid'][:5]}")
@@ -443,6 +522,9 @@ def main() -> None:
     print(f"test rows  : {len(test_rows)}")
     print(f"device     : {device}")
     print(f"freeze enc : {args.freeze_encoder}")
+    print(f"augment    : {args.augment} methods={args.augment_methods} prob={args.augment_prob}")
+    print(f"train repeat: {args.train_repeat}")
+    print(f"label smoothing: {args.label_smoothing}")
     print(f"save dir   : {args.save_dir}")
 
     best_val = -math.inf
@@ -457,6 +539,7 @@ def main() -> None:
             optimizer=optimizer,
             scaler=scaler,
             print_every=args.print_every,
+            label_smoothing=args.label_smoothing,
         )
         print(
             "train "
@@ -473,6 +556,7 @@ def main() -> None:
                 optimizer=None,
                 scaler=None,
                 print_every=0,
+                label_smoothing=0.0,
             )
         print(
             "val   "
@@ -525,6 +609,7 @@ def main() -> None:
             optimizer=None,
             scaler=None,
             print_every=0,
+            label_smoothing=0.0,
         )
     print(
         "test  "
