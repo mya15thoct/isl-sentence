@@ -69,6 +69,34 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--early-stop-patience", type=int, default=15)
     parser.add_argument("--print-every", type=int, default=20)
+    parser.add_argument("--classifier", choices=["linear", "cosine"], default="linear")
+    parser.add_argument("--head-dropout", type=float, default=0.0)
+    parser.add_argument("--logit-scale-init", type=float, default=10.0)
+    parser.add_argument("--max-logit-scale", type=float, default=100.0)
+    parser.add_argument(
+        "--class-text-embeddings",
+        type=Path,
+        help="Optional (num_classes, projection_dim) text/gloss embedding matrix for logit blending.",
+    )
+    parser.add_argument(
+        "--text-logit-weight",
+        type=float,
+        default=0.0,
+        help="Add this weight times class-text logits to classifier logits.",
+    )
+    parser.add_argument(
+        "--text-loss-weight",
+        type=float,
+        default=0.0,
+        help="Optional auxiliary CE loss on text-prototype logits alone.",
+    )
+    parser.add_argument("--text-logit-scale", type=float, default=20.0)
+    parser.add_argument(
+        "--freeze-epochs",
+        type=int,
+        default=0,
+        help="Freeze the pretrained encoder for this many initial epochs, then unfreeze.",
+    )
     parser.add_argument("--label-smoothing", type=float, default=0.0)
     parser.add_argument("--augment", action="store_true")
     parser.add_argument(
@@ -258,14 +286,63 @@ def collate_target(batch: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 class SentenceClassifier(nn.Module):
-    def __init__(self, encoder: KeypointConformerEncoder, embedding_dim: int, num_classes: int):
+    def __init__(
+        self,
+        encoder: KeypointConformerEncoder,
+        embedding_dim: int,
+        num_classes: int,
+        classifier: str = "linear",
+        head_dropout: float = 0.0,
+        logit_scale_init: float = 10.0,
+        max_logit_scale: float = 100.0,
+    ):
         super().__init__()
         self.encoder = encoder
-        self.classifier = nn.Linear(embedding_dim, num_classes)
+        self.head_dropout = nn.Dropout(head_dropout) if head_dropout > 0 else nn.Identity()
+        if classifier == "linear":
+            self.classifier = nn.Linear(embedding_dim, num_classes)
+        elif classifier == "cosine":
+            self.classifier = CosineClassifier(
+                embedding_dim,
+                num_classes,
+                logit_scale_init=logit_scale_init,
+                max_logit_scale=max_logit_scale,
+            )
+        else:
+            raise ValueError(f"Unknown classifier: {classifier}")
 
-    def forward(self, keypoints: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        keypoints: torch.Tensor,
+        lengths: torch.Tensor,
+        return_embedding: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         embedding = self.encoder(keypoints, lengths)
-        return self.classifier(embedding)
+        logits = self.classifier(self.head_dropout(embedding))
+        if return_embedding:
+            return logits, embedding
+        return logits
+
+
+class CosineClassifier(nn.Module):
+    def __init__(
+        self,
+        embedding_dim: int,
+        num_classes: int,
+        logit_scale_init: float = 10.0,
+        max_logit_scale: float = 100.0,
+    ) -> None:
+        super().__init__()
+        self.weight = nn.Parameter(torch.empty(num_classes, embedding_dim))
+        nn.init.xavier_uniform_(self.weight)
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(logit_scale_init), dtype=torch.float32))
+        self.max_logit_scale = max_logit_scale
+
+    def forward(self, embedding: torch.Tensor) -> torch.Tensor:
+        embedding = F.normalize(embedding.float(), dim=-1, eps=1e-6)
+        weight = F.normalize(self.weight.float(), dim=-1, eps=1e-6)
+        scale = self.logit_scale.float().exp().clamp(max=self.max_logit_scale)
+        return scale * embedding @ weight.t()
 
 
 def cfg_value(config: dict[str, Any], name: str, fallback: Any) -> Any:
@@ -297,6 +374,45 @@ def load_pretrained_encoder(
         "bad_tensors": bad,
         "config": checkpoint.get("config", {}) or {},
     }
+
+
+def set_encoder_trainable(model: SentenceClassifier, trainable: bool) -> None:
+    for parameter in model.encoder.parameters():
+        parameter.requires_grad = trainable
+
+
+def build_optimizer(
+    model: SentenceClassifier,
+    lr: float,
+    head_lr: float,
+    weight_decay: float,
+) -> torch.optim.Optimizer:
+    param_groups = []
+    encoder_params = [p for p in model.encoder.parameters() if p.requires_grad]
+    if encoder_params:
+        param_groups.append({"params": encoder_params, "lr": lr})
+    head_params = [p for name, p in model.named_parameters() if not name.startswith("encoder.")]
+    param_groups.append({"params": head_params, "lr": head_lr})
+    return torch.optim.AdamW(param_groups, weight_decay=weight_decay)
+
+
+def load_class_text_embeddings(
+    path: Path | None,
+    num_classes: int,
+    projection_dim: int,
+    device: torch.device,
+) -> torch.Tensor | None:
+    if path is None:
+        return None
+    embeddings = np.load(path).astype(np.float32, copy=True)
+    if embeddings.shape != (num_classes, projection_dim):
+        raise SystemExit(
+            "Class text embedding shape mismatch: "
+            f"expected {(num_classes, projection_dim)}, got {embeddings.shape}"
+        )
+    np.nan_to_num(embeddings, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+    tensor = torch.from_numpy(embeddings).to(device=device, dtype=torch.float32)
+    return F.normalize(tensor, dim=-1, eps=1e-6)
 
 
 def make_loaders(
@@ -353,6 +469,10 @@ def run_epoch(
     scaler: torch.amp.GradScaler | None,
     print_every: int,
     label_smoothing: float = 0.0,
+    class_text_embeddings: torch.Tensor | None = None,
+    text_logit_weight: float = 0.0,
+    text_loss_weight: float = 0.0,
+    text_logit_scale: float = 20.0,
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
@@ -372,12 +492,33 @@ def run_epoch(
 
         use_amp = scaler is not None and scaler.is_enabled()
         with torch.amp.autocast(device_type=device.type, enabled=use_amp):
-            logits = model(keypoints, lengths)
+            model_output = model(
+                keypoints,
+                lengths,
+                return_embedding=class_text_embeddings is not None,
+            )
+            if class_text_embeddings is None:
+                logits = model_output
+                text_logits = None
+            else:
+                logits, embeddings = model_output
+                text_logits = text_logit_scale * (
+                    F.normalize(embeddings.float(), dim=-1, eps=1e-6)
+                    @ class_text_embeddings.t()
+                )
+                if text_logit_weight > 0:
+                    logits = logits + text_logit_weight * text_logits
             loss = F.cross_entropy(
                 logits.float(),
                 labels,
                 label_smoothing=label_smoothing,
             )
+            if text_logits is not None and text_loss_weight > 0:
+                loss = loss + text_loss_weight * F.cross_entropy(
+                    text_logits.float(),
+                    labels,
+                    label_smoothing=label_smoothing,
+                )
 
         if not torch.isfinite(loss):
             raise RuntimeError(f"Non-finite classifier loss at step={step} uids={batch['uid'][:5]}")
@@ -495,18 +636,28 @@ def main() -> None:
             print(f"missing keys     : {pretrained_info.get('missing_keys', [])[:10]}")
             print(f"unexpected keys  : {pretrained_info.get('unexpected_keys', [])[:10]}")
 
-    if args.freeze_encoder:
+    initially_freeze_encoder = args.freeze_encoder or args.freeze_epochs > 0
+    if initially_freeze_encoder:
         for parameter in encoder.parameters():
             parameter.requires_grad = False
 
-    model = SentenceClassifier(encoder, args.projection_dim, num_classes).to(device)
+    model = SentenceClassifier(
+        encoder,
+        args.projection_dim,
+        num_classes,
+        classifier=args.classifier,
+        head_dropout=args.head_dropout,
+        logit_scale_init=args.logit_scale_init,
+        max_logit_scale=args.max_logit_scale,
+    ).to(device)
+    class_text_embeddings = load_class_text_embeddings(
+        args.class_text_embeddings,
+        num_classes,
+        args.projection_dim,
+        device,
+    )
     head_lr = args.head_lr if args.head_lr is not None else args.lr
-    param_groups = []
-    encoder_params = [p for p in model.encoder.parameters() if p.requires_grad]
-    if encoder_params:
-        param_groups.append({"params": encoder_params, "lr": args.lr})
-    param_groups.append({"params": model.classifier.parameters(), "lr": head_lr})
-    optimizer = torch.optim.AdamW(param_groups, weight_decay=args.weight_decay)
+    optimizer = build_optimizer(model, args.lr, head_lr, args.weight_decay)
     scaler = torch.amp.GradScaler(device.type, enabled=args.amp and device.type == "cuda")
     train_loader, val_loader, test_loader = make_loaders(train_rows, val_rows, test_rows, args)
 
@@ -529,6 +680,11 @@ def main() -> None:
     print(f"test rows  : {len(test_rows)}")
     print(f"device     : {device}")
     print(f"freeze enc : {args.freeze_encoder}")
+    print(f"freeze epochs: {args.freeze_epochs}")
+    print(f"classifier : {args.classifier}")
+    print(f"head dropout: {args.head_dropout}")
+    print(f"class text : {args.class_text_embeddings or ''}")
+    print(f"text weight: {args.text_logit_weight} aux={args.text_loss_weight}")
     print(f"augment    : {args.augment} methods={args.augment_methods} prob={args.augment_prob}")
     print(f"train repeat: {args.train_repeat}")
     print(f"label smoothing: {args.label_smoothing}")
@@ -538,6 +694,15 @@ def main() -> None:
     epochs_without_improvement = 0
     history: list[dict[str, Any]] = []
     for epoch in range(1, args.epochs + 1):
+        if (
+            args.freeze_epochs > 0
+            and not args.freeze_encoder
+            and epoch == args.freeze_epochs + 1
+        ):
+            print(f"unfreezing encoder at epoch {epoch}")
+            set_encoder_trainable(model, True)
+            optimizer = build_optimizer(model, args.lr, head_lr, args.weight_decay)
+
         print(f"\nEpoch {epoch}/{args.epochs}")
         train_metrics = run_epoch(
             model,
@@ -547,6 +712,10 @@ def main() -> None:
             scaler=scaler,
             print_every=args.print_every,
             label_smoothing=args.label_smoothing,
+            class_text_embeddings=class_text_embeddings,
+            text_logit_weight=args.text_logit_weight,
+            text_loss_weight=args.text_loss_weight,
+            text_logit_scale=args.text_logit_scale,
         )
         print(
             "train "
@@ -564,6 +733,10 @@ def main() -> None:
                 scaler=None,
                 print_every=0,
                 label_smoothing=0.0,
+                class_text_embeddings=class_text_embeddings,
+                text_logit_weight=args.text_logit_weight,
+                text_loss_weight=0.0,
+                text_logit_scale=args.text_logit_scale,
             )
         print(
             "val   "
@@ -617,6 +790,10 @@ def main() -> None:
             scaler=None,
             print_every=0,
             label_smoothing=0.0,
+            class_text_embeddings=class_text_embeddings,
+            text_logit_weight=args.text_logit_weight,
+            text_loss_weight=0.0,
+            text_logit_scale=args.text_logit_scale,
         )
     print(
         "test  "
