@@ -68,6 +68,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--early-stop-patience", type=int, default=15)
+    parser.add_argument(
+        "--early-stop-min-delta",
+        type=float,
+        default=0.0,
+        help="Minimum val top1 improvement required to reset early stopping.",
+    )
+    parser.add_argument(
+        "--lr-reduce-patience",
+        type=int,
+        default=0,
+        help="If >0, reduce learning rates after this many non-improving epochs.",
+    )
+    parser.add_argument("--lr-reduce-factor", type=float, default=0.5)
+    parser.add_argument("--min-lr", type=float, default=1e-7)
     parser.add_argument("--print-every", type=int, default=20)
     parser.add_argument("--classifier", choices=["linear", "cosine"], default="linear")
     parser.add_argument("--head-dropout", type=float, default=0.0)
@@ -396,6 +410,25 @@ def build_optimizer(
     return torch.optim.AdamW(param_groups, weight_decay=weight_decay)
 
 
+def format_lrs(optimizer: torch.optim.Optimizer) -> str:
+    return ", ".join(f"{group['lr']:.3g}" for group in optimizer.param_groups)
+
+
+def reduce_learning_rates(
+    optimizer: torch.optim.Optimizer,
+    factor: float,
+    min_lr: float,
+) -> list[tuple[float, float]]:
+    changes: list[tuple[float, float]] = []
+    for group in optimizer.param_groups:
+        old_lr = float(group["lr"])
+        new_lr = max(old_lr * factor, min_lr)
+        if new_lr < old_lr:
+            group["lr"] = new_lr
+            changes.append((old_lr, new_lr))
+    return changes
+
+
 def load_class_text_embeddings(
     path: Path | None,
     num_classes: int,
@@ -592,6 +625,11 @@ def write_split(path: Path, split_name: str, rows: list[dict[str, str]]) -> None
 
 def main() -> None:
     args = parse_args()
+    if args.lr_reduce_patience > 0:
+        if not 0.0 < args.lr_reduce_factor < 1.0:
+            raise SystemExit("--lr-reduce-factor must be between 0 and 1 when LR reduction is enabled.")
+        if args.min_lr <= 0:
+            raise SystemExit("--min-lr must be positive.")
     set_seed(args.seed)
     rows = read_manifest(args.manifest)
     label_names = build_label_names(rows)
@@ -683,6 +721,12 @@ def main() -> None:
     print(f"freeze epochs: {args.freeze_epochs}")
     print(f"classifier : {args.classifier}")
     print(f"head dropout: {args.head_dropout}")
+    print(f"lrs        : {format_lrs(optimizer)}")
+    print(
+        "lr reduce  : "
+        f"patience={args.lr_reduce_patience} "
+        f"factor={args.lr_reduce_factor} min_lr={args.min_lr}"
+    )
     print(f"class text : {args.class_text_embeddings or ''}")
     print(f"text weight: {args.text_logit_weight} aux={args.text_loss_weight}")
     print(f"augment    : {args.augment} methods={args.augment_methods} prob={args.augment_prob}")
@@ -702,6 +746,7 @@ def main() -> None:
             print(f"unfreezing encoder at epoch {epoch}")
             set_encoder_trainable(model, True)
             optimizer = build_optimizer(model, args.lr, head_lr, args.weight_decay)
+            print(f"optimizer rebuilt with lrs: {format_lrs(optimizer)}")
 
         print(f"\nEpoch {epoch}/{args.epochs}")
         train_metrics = run_epoch(
@@ -756,7 +801,8 @@ def main() -> None:
             label_names,
             args,
         )
-        if val_metrics["top1"] > best_val:
+        improved = val_metrics["top1"] > best_val + args.early_stop_min_delta
+        if improved:
             best_val = val_metrics["top1"]
             epochs_without_improvement = 0
             save_checkpoint(
@@ -774,6 +820,23 @@ def main() -> None:
                 f"early-stop no_improvement={epochs_without_improvement}/"
                 f"{args.early_stop_patience} best_val_top1={best_val:.3f}"
             )
+            if (
+                args.lr_reduce_patience > 0
+                and epochs_without_improvement >= args.lr_reduce_patience
+            ):
+                changes = reduce_learning_rates(
+                    optimizer,
+                    factor=args.lr_reduce_factor,
+                    min_lr=args.min_lr,
+                )
+                if changes:
+                    change_text = ", ".join(
+                        f"{old_lr:.3g}->{new_lr:.3g}" for old_lr, new_lr in changes
+                    )
+                    print(f"lr reduced: {change_text}")
+                    epochs_without_improvement = 0
+                else:
+                    print(f"lr already at min_lr={args.min_lr}")
             if epochs_without_improvement >= args.early_stop_patience:
                 print(f"early stopping at epoch {epoch}")
                 break
