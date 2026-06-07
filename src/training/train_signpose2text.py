@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,9 @@ from typing import Any
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Subset
+
+if __package__ in (None, ""):
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.modeling.signpose2text import ConformerT5SignPose2Text
 from src.training.signpose2text_dataset import (

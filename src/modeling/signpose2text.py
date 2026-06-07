@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
+from pathlib import Path
 from typing import Any
 
 import torch
 from torch import nn
+
+if __package__ in (None, ""):
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.modeling.keypoint_conformer import KeypointConformerEncoder
 

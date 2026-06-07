@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+import sys
 from pathlib import Path
 from typing import Any
 
 import torch
 from torch.utils.data import DataLoader
+
+if __package__ in (None, ""):
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.modeling.signpose2text import ConformerT5SignPose2Text
 from src.training.signpose2text_dataset import (
