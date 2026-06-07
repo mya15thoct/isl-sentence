@@ -29,6 +29,7 @@ from src.video.conformer_encoder import KeypointConformerEncoder
 
 DEFAULTS = {
     "val_ratio": 0.02,
+    "split_group_key": "",
     "seed": 42,
     "max_frames": 512,
     "sample_mode": "uniform",
@@ -58,6 +59,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-matrix-rows", type=int, default=20000)
 
     parser.add_argument("--val-ratio", type=float)
+    parser.add_argument("--split-group-key")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--max-frames", type=int)
     parser.add_argument("--sample-mode", choices=["uniform", "center", "random"])
@@ -92,11 +94,12 @@ def select_rows(
     split: str,
     val_ratio: float,
     seed: int,
+    group_key: str | None = None,
 ) -> list[dict[str, str]]:
     if split == "all":
         return rows
 
-    train_rows, val_rows = split_rows(rows, val_ratio, seed)
+    train_rows, val_rows = split_rows(rows, val_ratio, seed, group_key=group_key)
     return val_rows if split == "val" else train_rows
 
 
@@ -247,6 +250,7 @@ def main() -> None:
     bad_tensors = find_bad_tensors(state_dict)
 
     val_ratio = float(cfg_value(args, config, "val_ratio"))
+    split_group_key = str(cfg_value(args, config, "split_group_key") or "")
     seed = int(cfg_value(args, config, "seed"))
     max_frames = int(cfg_value(args, config, "max_frames"))
     sample_mode = str(cfg_value(args, config, "sample_mode"))
@@ -254,7 +258,13 @@ def main() -> None:
 
     rows = read_index_csv(args.index_csv)
     rows = filter_usable_rows(rows, check_files=not args.skip_file_check)
-    eval_rows = select_rows(rows, args.split, val_ratio, seed)
+    eval_rows = select_rows(
+        rows,
+        args.split,
+        val_ratio,
+        seed,
+        group_key=split_group_key or None,
+    )
     if not eval_rows:
         raise SystemExit("No rows selected for evaluation.")
     if len(eval_rows) > args.max_matrix_rows:
@@ -293,6 +303,8 @@ def main() -> None:
     print(f"checkpoint : {args.checkpoint}")
     print(f"epoch      : {checkpoint.get('epoch')}")
     print(f"split      : {args.split}")
+    if split_group_key:
+        print(f"split group: {split_group_key}")
     print(f"rows       : {len(dataset)}")
     print(f"bad tensors: {len(bad_tensors)}")
     if bad_tensors:
@@ -314,6 +326,7 @@ def main() -> None:
             "checkpoint": str(args.checkpoint),
             "epoch": float(checkpoint.get("epoch", -1)),
             "split": args.split,
+            "split_group_key": split_group_key,
             "bad_tensor_count": float(len(bad_tensors)),
             "logit_scale": scale_value,
             "video_finite": float(torch.isfinite(video_embeddings).all().item()),

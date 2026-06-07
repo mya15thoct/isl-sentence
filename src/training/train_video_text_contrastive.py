@@ -145,6 +145,19 @@ def format_tensor_stats(name: str, tensor: torch.Tensor) -> str:
     )
 
 
+def group_values(rows: list[dict[str, str]], group_key: str) -> set[str]:
+    values: set[str] = set()
+    for idx, row in enumerate(rows):
+        value = (
+            row.get(group_key, "").strip()
+            or row.get("keypoint_path", "").strip()
+            or row.get("uid", "").strip()
+            or f"row-{idx}"
+        )
+        values.add(value)
+    return values
+
+
 def run_epoch(
     model: nn.Module,
     loader: DataLoader,
@@ -386,6 +399,14 @@ def main() -> None:
     print(f"save dir   : {args.save_dir}")
     if args.split_group_key:
         print(f"split group: {args.split_group_key}")
+        train_groups = group_values(train_rows, args.split_group_key)
+        val_groups = group_values(val_rows, args.split_group_key)
+        overlap = train_groups & val_groups
+        print(f"train groups: {len(train_groups)}")
+        print(f"val groups  : {len(val_groups)}")
+        print(f"group overlap: {len(overlap)}")
+        if overlap:
+            print(f"warning: split group overlap sample={sorted(overlap)[:5]}")
 
     if start_epoch > args.epochs:
         print(f"checkpoint is already at epoch {start_epoch - 1}; nothing to train.")
