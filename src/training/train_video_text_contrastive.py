@@ -38,6 +38,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--val-ratio", type=float, default=0.02)
+    parser.add_argument(
+        "--split-group-key",
+        default="",
+        help=(
+            "Keep rows with the same group value in the same split. "
+            "Use video_uid for relation-aware manifests to avoid train/val leakage."
+        ),
+    )
     parser.add_argument("--early-stop-patience", type=int, default=0)
     parser.add_argument("--early-stop-min-delta", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=42)
@@ -263,7 +271,12 @@ def main() -> None:
             f"but projection_dim is {args.projection_dim}."
         )
 
-    train_rows, val_rows = split_rows(rows, args.val_ratio, args.seed)
+    train_rows, val_rows = split_rows(
+        rows,
+        args.val_ratio,
+        args.seed,
+        group_key=args.split_group_key or None,
+    )
     train_sample_mode = args.sample_mode
     val_sample_mode = "center" if args.sample_mode == "random" else args.sample_mode
 
@@ -371,6 +384,8 @@ def main() -> None:
     print(f"val rows   : {len(val_dataset)}")
     print(f"device     : {device}")
     print(f"save dir   : {args.save_dir}")
+    if args.split_group_key:
+        print(f"split group: {args.split_group_key}")
 
     if start_epoch > args.epochs:
         print(f"checkpoint is already at epoch {start_epoch - 1}; nothing to train.")

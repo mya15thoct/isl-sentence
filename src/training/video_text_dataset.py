@@ -21,15 +21,41 @@ def split_rows(
     rows: list[dict[str, str]],
     val_ratio: float,
     seed: int,
+    group_key: str | None = None,
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     if val_ratio <= 0:
         return rows, []
 
     rng = random.Random(seed)
-    shuffled = list(rows)
-    rng.shuffle(shuffled)
-    val_size = max(1, int(len(shuffled) * val_ratio))
-    return shuffled[val_size:], shuffled[:val_size]
+    if not group_key:
+        shuffled = list(rows)
+        rng.shuffle(shuffled)
+        val_size = max(1, int(len(shuffled) * val_ratio))
+        return shuffled[val_size:], shuffled[:val_size]
+
+    groups: dict[str, list[dict[str, str]]] = {}
+    for idx, row in enumerate(rows):
+        group = (
+            row.get(group_key, "").strip()
+            or row.get("keypoint_path", "").strip()
+            or row.get("uid", "").strip()
+            or f"row-{idx}"
+        )
+        groups.setdefault(group, []).append(row)
+
+    shuffled_groups = list(groups.values())
+    rng.shuffle(shuffled_groups)
+
+    target_val_size = max(1, int(len(rows) * val_ratio))
+    val: list[dict[str, str]] = []
+    train: list[dict[str, str]] = []
+    for group_rows in shuffled_groups:
+        if len(val) < target_val_size:
+            val.extend(group_rows)
+        else:
+            train.extend(group_rows)
+
+    return train, val
 
 
 def filter_usable_rows(
