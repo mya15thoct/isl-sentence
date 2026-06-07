@@ -1,5 +1,5 @@
 """
-Keypoint video encoder for iSign video-text pretraining.
+Holistic keypoint Conformer encoder for SignPose2Text experiments.
 
 Input:
   x       : (B, T, 1662) MediaPipe Holistic keypoints
@@ -10,7 +10,7 @@ Output:
 
 Architecture:
   body-part MLP branches -> temporal downsampling -> Conformer blocks
-  -> attention pooling -> projection to MiniLM embedding dimension.
+  -> attention pooling -> projection.
 """
 
 from __future__ import annotations
