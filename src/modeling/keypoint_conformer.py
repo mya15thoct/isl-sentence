@@ -269,7 +269,12 @@ class KeypointConformerEncoder(nn.Module):
             nn.Linear(model_dim, projection_dim),
         )
 
-    def forward(self, x: torch.Tensor, lengths: torch.Tensor | None = None) -> torch.Tensor:
+    def encode_sequence(
+        self,
+        x: torch.Tensor,
+        lengths: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return temporal memory, valid mask, and downsampled lengths."""
         if lengths is None:
             lengths = torch.full(
                 (x.size(0),),
@@ -287,6 +292,10 @@ class KeypointConformerEncoder(nn.Module):
         for layer in self.layers:
             x = layer(x, valid_mask)
 
+        return x, valid_mask, lengths
+
+    def forward(self, x: torch.Tensor, lengths: torch.Tensor | None = None) -> torch.Tensor:
+        x, valid_mask, _ = self.encode_sequence(x, lengths)
         pooled = self.pool(x, valid_mask)
         embedding = self.projection(pooled)
         if self.normalize_output:
