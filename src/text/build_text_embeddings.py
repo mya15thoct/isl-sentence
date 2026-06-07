@@ -1,7 +1,7 @@
 """
-Build sentence text embedding cache from one or more manifest CSV files.
+Build text embedding caches from one or more manifest CSV files.
 
-This is used for iSign video-text contrastive pretraining:
+This is used for auxiliary semantic supervision in SignPose2Text experiments:
   text -> MiniLM/Sentence-BERT -> fixed text embedding
 
 Example:

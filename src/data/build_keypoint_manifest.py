@@ -3,7 +3,8 @@ Build a training-ready manifest from extracted keypoint files.
 
 This script is useful while extraction is still running: it scans the metadata
 CSV, checks which expected .npy files already exist, and writes rows that can be
-fed into text embedding or contrastive training scripts.
+fed into SignPose2Text manifests, text embedding caches, or other downstream
+training scripts.
 
 Example:
   python src/data/build_keypoint_manifest.py \
