@@ -61,6 +61,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-frames", type=int, default=512)
     parser.add_argument(
+        "--eval-crops",
+        type=int,
+        default=1,
+        help="Average logits over this many deterministic temporal crops for val/test.",
+    )
+    parser.add_argument(
         "--sample-mode",
         choices=["uniform", "center", "random"],
         default="uniform",
@@ -212,6 +218,29 @@ def stratified_split(
     return train, val, test
 
 
+def sample_eval_crops(
+    keypoints: np.ndarray,
+    max_frames: int,
+    crop_count: int,
+    fallback_mode: str,
+) -> list[np.ndarray]:
+    crop_count = max(1, crop_count)
+    if crop_count <= 1 or max_frames <= 0 or keypoints.shape[0] <= max_frames:
+        return [
+            sample_frames(keypoints, max_frames, fallback_mode).astype(
+                np.float32,
+                copy=True,
+            )
+        ]
+
+    max_start = keypoints.shape[0] - max_frames
+    starts = np.linspace(0, max_start, crop_count).round().astype(np.int64)
+    crops: list[np.ndarray] = []
+    for start in dict.fromkeys(starts.tolist()):
+        crops.append(keypoints[start : start + max_frames].astype(np.float32, copy=True))
+    return crops
+
+
 class TargetSentenceDataset(Dataset):
     def __init__(
         self,
@@ -230,6 +259,7 @@ class TargetSentenceDataset(Dataset):
         temporal_scale_max: float = 1.20,
         crop_min: float = 0.85,
         crop_max: float = 0.98,
+        eval_crops: int = 1,
     ) -> None:
         self.rows = rows
         self.max_frames = max_frames
@@ -246,6 +276,7 @@ class TargetSentenceDataset(Dataset):
         self.temporal_scale_max = temporal_scale_max
         self.crop_min = crop_min
         self.crop_max = crop_max
+        self.eval_crops = max(1, eval_crops)
 
     def __len__(self) -> int:
         return len(self.rows) * self.repeat
@@ -255,6 +286,23 @@ class TargetSentenceDataset(Dataset):
         keypoints = np.load(row["keypoint_path"]).astype(np.float32, copy=False)
         if keypoints.ndim != 2 or keypoints.shape[1] != KEYPOINT_DIM:
             raise ValueError(f"Invalid keypoint shape {keypoints.shape}: {row['keypoint_path']}")
+
+        if self.eval_crops > 1 and not self.augment:
+            crops = sample_eval_crops(
+                keypoints,
+                max_frames=self.max_frames,
+                crop_count=self.eval_crops,
+                fallback_mode=self.sample_mode,
+            )
+            for crop in crops:
+                np.nan_to_num(crop, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+            return {
+                "uid": row.get("uid", ""),
+                "label": int(row["label_id"]),
+                "keypoints": [torch.from_numpy(crop) for crop in crops],
+                "length": [crop.shape[0] for crop in crops],
+            }
+
         keypoints = sample_frames(keypoints, self.max_frames, self.sample_mode).astype(
             np.float32,
             copy=True,
@@ -283,19 +331,37 @@ class TargetSentenceDataset(Dataset):
 
 
 def collate_target(batch: list[dict[str, Any]]) -> dict[str, Any]:
-    lengths = torch.tensor([int(item["length"]) for item in batch], dtype=torch.long)
+    flat_keypoints: list[torch.Tensor] = []
+    flat_lengths: list[int] = []
+    crop_counts: list[int] = []
+    for item in batch:
+        keypoint_item = item["keypoints"]
+        if isinstance(keypoint_item, list):
+            crops = keypoint_item
+            lengths = item["length"]
+        else:
+            crops = [keypoint_item]
+            lengths = [item["length"]]
+
+        crop_counts.append(len(crops))
+        for crop, length in zip(crops, lengths):
+            flat_keypoints.append(crop)
+            flat_lengths.append(int(length))
+
+    lengths = torch.tensor(flat_lengths, dtype=torch.long)
     max_len = int(lengths.max().item())
-    feature_dim = batch[0]["keypoints"].shape[1]
-    keypoints = torch.zeros(len(batch), max_len, feature_dim, dtype=torch.float32)
-    for i, item in enumerate(batch):
-        x = item["keypoints"]
+    feature_dim = flat_keypoints[0].shape[1]
+    keypoints = torch.zeros(len(flat_keypoints), max_len, feature_dim, dtype=torch.float32)
+    for i, x in enumerate(flat_keypoints):
         keypoints[i, : x.shape[0]] = x
+
     labels = torch.tensor([int(item["label"]) for item in batch], dtype=torch.long)
     return {
         "uid": [item["uid"] for item in batch],
         "keypoints": keypoints,
         "lengths": lengths,
         "labels": labels,
+        "crop_counts": torch.tensor(crop_counts, dtype=torch.long),
     }
 
 
@@ -474,6 +540,19 @@ def make_loaders(
     eval_mode = "center" if args.sample_mode == "random" else args.sample_mode
     val_dataset = TargetSentenceDataset(val_rows, args.max_frames, eval_mode)
     test_dataset = TargetSentenceDataset(test_rows, args.max_frames, eval_mode)
+    if args.eval_crops > 1:
+        val_dataset = TargetSentenceDataset(
+            val_rows,
+            args.max_frames,
+            eval_mode,
+            eval_crops=args.eval_crops,
+        )
+        test_dataset = TargetSentenceDataset(
+            test_rows,
+            args.max_frames,
+            eval_mode,
+            eval_crops=args.eval_crops,
+        )
 
     loader_args = {
         "batch_size": args.batch_size,
@@ -492,6 +571,20 @@ def topk_accuracy(logits: torch.Tensor, labels: torch.Tensor, k: int) -> float:
     k = min(k, logits.size(1))
     pred = logits.topk(k, dim=1).indices
     return float((pred == labels[:, None]).any(dim=1).float().mean().item())
+
+
+def average_crop_logits(logits: torch.Tensor, crop_counts: torch.Tensor) -> torch.Tensor:
+    counts = crop_counts.detach().cpu().tolist()
+    if len(counts) == logits.size(0) and all(count == 1 for count in counts):
+        return logits
+    if sum(counts) != logits.size(0):
+        raise RuntimeError(
+            f"Crop count mismatch: logits={logits.size(0)} crop_counts_sum={sum(counts)}"
+        )
+    return torch.stack(
+        [chunk.mean(dim=0) for chunk in torch.split(logits, counts, dim=0)],
+        dim=0,
+    )
 
 
 def run_epoch(
@@ -519,6 +612,7 @@ def run_epoch(
         keypoints = batch["keypoints"].to(device, non_blocking=True)
         lengths = batch["lengths"].to(device, non_blocking=True)
         labels = batch["labels"].to(device, non_blocking=True)
+        crop_counts = batch["crop_counts"].to(device, non_blocking=True)
 
         if training:
             optimizer.zero_grad(set_to_none=True)
@@ -541,6 +635,8 @@ def run_epoch(
                 )
                 if text_logit_weight > 0:
                     logits = logits + text_logit_weight * text_logits
+            if not training:
+                logits = average_crop_logits(logits, crop_counts)
             loss = F.cross_entropy(
                 logits.float(),
                 labels,
@@ -731,6 +827,7 @@ def main() -> None:
     print(f"text weight: {args.text_logit_weight} aux={args.text_loss_weight}")
     print(f"augment    : {args.augment} methods={args.augment_methods} prob={args.augment_prob}")
     print(f"train repeat: {args.train_repeat}")
+    print(f"eval crops : {args.eval_crops}")
     print(f"label smoothing: {args.label_smoothing}")
     print(f"save dir   : {args.save_dir}")
 
