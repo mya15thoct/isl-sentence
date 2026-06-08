@@ -21,11 +21,24 @@ class SignPose2TextSample:
     keypoints: torch.Tensor
     text: str
     source_row: int
+    text_embedding: torch.Tensor | None = None
 
 
 def read_manifest(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def read_embedding_index(path: Path) -> dict[int, int]:
+    mapping: dict[int, int] = {}
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            source_row = row.get("source_row", "").strip()
+            embedding_id = row.get("embedding_id", "").strip()
+            if not source_row or not embedding_id:
+                continue
+            mapping[int(source_row)] = int(embedding_id)
+    return mapping
 
 
 def uniform_indices(num_frames: int, max_frames: int) -> np.ndarray:
@@ -51,6 +64,8 @@ class SignPose2TextDataset(torch.utils.data.Dataset[SignPose2TextSample]):
         sample_mode: str = "uniform",
         require_keypoints: bool = True,
         limit: int | None = None,
+        text_embeddings: np.ndarray | None = None,
+        embedding_index: Path | None = None,
     ) -> None:
         rows = read_manifest(manifest)
         if limit is not None:
@@ -72,6 +87,12 @@ class SignPose2TextDataset(torch.utils.data.Dataset[SignPose2TextSample]):
         self.keypoint_column = keypoint_column
         self.max_frames = max_frames
         self.sample_mode = sample_mode
+        self.text_embeddings = text_embeddings
+        self.embedding_by_source_row = (
+            read_embedding_index(embedding_index)
+            if embedding_index is not None
+            else None
+        )
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -91,12 +112,22 @@ class SignPose2TextDataset(torch.utils.data.Dataset[SignPose2TextSample]):
         else:
             raise ValueError(f"Unknown sample_mode: {self.sample_mode}")
         arr = arr[indices]
+        source_row = int(row.get("_source_row", index))
+        text_embedding = None
+        if self.text_embeddings is not None:
+            embedding_id = source_row
+            if self.embedding_by_source_row is not None:
+                embedding_id = self.embedding_by_source_row[source_row]
+            text_embedding = torch.from_numpy(
+                self.text_embeddings[embedding_id].astype(np.float32, copy=True)
+            )
 
         return SignPose2TextSample(
             uid=row.get("uid", ""),
             keypoints=torch.from_numpy(arr.copy()),
             text=row[self.text_column],
-            source_row=int(row.get("_source_row", index)),
+            source_row=source_row,
+            text_embedding=text_embedding,
         )
 
 
@@ -133,4 +164,9 @@ class SignPose2TextCollator:
             "labels": labels,
             "decoder_attention_mask": encoded["attention_mask"],
             "texts": texts,
+            **(
+                {"text_embeddings": torch.stack([item.text_embedding for item in batch]).float()}
+                if all(item.text_embedding is not None for item in batch)
+                else {}
+            ),
         }

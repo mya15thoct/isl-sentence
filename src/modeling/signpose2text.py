@@ -9,6 +9,7 @@ from typing import Any
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[2]))
@@ -35,6 +36,7 @@ class ConformerT5SignPose2Text(nn.Module):
         keypoint_heads: int = 4,
         downsample_stride: int = 4,
         dropout: float = 0.1,
+        semantic_embedding_dim: int = 384,
     ) -> None:
         super().__init__()
         require_transformers()
@@ -55,15 +57,36 @@ class ConformerT5SignPose2Text(nn.Module):
             nn.LayerNorm(keypoint_model_dim),
             nn.Linear(keypoint_model_dim, self.text_model.config.d_model),
         )
+        self.semantic_projection = nn.Sequential(
+            nn.LayerNorm(keypoint_model_dim),
+            nn.Linear(keypoint_model_dim, semantic_embedding_dim),
+        )
+
+    def encode_keypoint_memory(
+        self,
+        keypoints: torch.Tensor,
+        lengths: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        memory, valid_mask, _ = self.keypoint_encoder.encode_sequence(keypoints, lengths)
+        return memory, valid_mask
 
     def encode_keypoints(
         self,
         keypoints: torch.Tensor,
         lengths: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        memory, valid_mask, _ = self.keypoint_encoder.encode_sequence(keypoints, lengths)
+        memory, valid_mask = self.encode_keypoint_memory(keypoints, lengths)
         memory = self.memory_projection(memory)
         return memory, valid_mask.long()
+
+    def semantic_embedding_from_memory(
+        self,
+        memory: torch.Tensor,
+        valid_mask: torch.Tensor,
+    ) -> torch.Tensor:
+        pooled = self.keypoint_encoder.pool(memory, valid_mask)
+        embedding = self.semantic_projection(pooled)
+        return F.normalize(embedding.float(), dim=-1, eps=1e-6)
 
     def forward(
         self,
@@ -83,6 +106,28 @@ class ConformerT5SignPose2Text(nn.Module):
             decoder_attention_mask=decoder_attention_mask,
             return_dict=True,
         )
+
+    def forward_with_semantic(
+        self,
+        keypoints: torch.Tensor,
+        lengths: torch.Tensor,
+        labels: torch.Tensor | None = None,
+        decoder_attention_mask: torch.Tensor | None = None,
+    ) -> tuple[Any, torch.Tensor]:
+        from transformers.modeling_outputs import BaseModelOutput
+
+        keypoint_memory, valid_mask = self.encode_keypoint_memory(keypoints, lengths)
+        memory = self.memory_projection(keypoint_memory)
+        encoder_outputs = BaseModelOutput(last_hidden_state=memory)
+        outputs = self.text_model(
+            encoder_outputs=encoder_outputs,
+            attention_mask=valid_mask.long(),
+            labels=labels,
+            decoder_attention_mask=decoder_attention_mask,
+            return_dict=True,
+        )
+        semantic_embedding = self.semantic_embedding_from_memory(keypoint_memory, valid_mask)
+        return outputs, semantic_embedding
 
     @torch.no_grad()
     def generate(

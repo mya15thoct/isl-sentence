@@ -94,7 +94,14 @@ def main() -> None:
         downsample_stride=int(config.get("downsample_stride", 4)),
         dropout=float(config.get("dropout", 0.1)),
     ).to(device)
-    model.load_state_dict(checkpoint["model"], strict=True)
+    load_result = model.load_state_dict(checkpoint["model"], strict=False)
+    if load_result.missing_keys or load_result.unexpected_keys:
+        print(
+            "warning: checkpoint key mismatch "
+            f"missing={load_result.missing_keys[:8]} "
+            f"unexpected={load_result.unexpected_keys[:8]}",
+            flush=True,
+        )
     model.eval()
 
     base_dataset = SignPose2TextDataset(

@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, Subset
 
 if __package__ in (None, ""):
@@ -50,6 +51,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generate-batches", type=int, default=1)
     parser.add_argument("--num-beams", type=int, default=4)
     parser.add_argument("--max-new-tokens", type=int, default=64)
+    parser.add_argument("--semantic-text-embeddings", type=Path)
+    parser.add_argument("--semantic-index-csv", type=Path)
+    parser.add_argument("--semantic-loss-weight", type=float, default=0.0)
+    parser.add_argument("--semantic-embedding-dim", type=int, default=384)
     parser.add_argument(
         "--init-keypoint-encoder",
         type=Path,
@@ -90,7 +95,18 @@ def move_batch(batch: dict[str, Any], device: torch.device) -> dict[str, Any]:
     output = dict(batch)
     for key in ("keypoints", "lengths", "labels", "decoder_attention_mask"):
         output[key] = batch[key].to(device, non_blocking=True)
+    if "text_embeddings" in batch:
+        output["text_embeddings"] = batch["text_embeddings"].to(device, non_blocking=True)
     return output
+
+
+def semantic_alignment_loss(
+    video_embeddings: torch.Tensor,
+    text_embeddings: torch.Tensor,
+) -> torch.Tensor:
+    text_embeddings = F.normalize(text_embeddings.float(), dim=-1, eps=1e-6)
+    video_embeddings = F.normalize(video_embeddings.float(), dim=-1, eps=1e-6)
+    return 1.0 - torch.sum(video_embeddings * text_embeddings, dim=-1).mean()
 
 
 def checkpoint_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:
@@ -214,6 +230,8 @@ def train_one_epoch(
 ) -> dict[str, float]:
     model.train()
     total_loss = 0.0
+    total_generation_loss = 0.0
+    total_semantic_loss = 0.0
     total_rows = 0
     start = time.time()
     use_amp = args.amp and device.type == "cuda"
@@ -223,13 +241,28 @@ def train_one_epoch(
         batch = move_batch(batch, device)
         optimizer.zero_grad(set_to_none=True)
         with torch.cuda.amp.autocast(enabled=use_amp):
-            outputs = model(
-                keypoints=batch["keypoints"],
-                lengths=batch["lengths"],
-                labels=batch["labels"],
-                decoder_attention_mask=batch["decoder_attention_mask"],
+            use_semantic = (
+                args.semantic_loss_weight > 0
+                and "text_embeddings" in batch
             )
-            loss = outputs.loss
+            if use_semantic:
+                outputs, video_embeddings = model.forward_with_semantic(
+                    keypoints=batch["keypoints"],
+                    lengths=batch["lengths"],
+                    labels=batch["labels"],
+                    decoder_attention_mask=batch["decoder_attention_mask"],
+                )
+                sem_loss = semantic_alignment_loss(video_embeddings, batch["text_embeddings"])
+                loss = outputs.loss + args.semantic_loss_weight * sem_loss
+            else:
+                outputs = model(
+                    keypoints=batch["keypoints"],
+                    lengths=batch["lengths"],
+                    labels=batch["labels"],
+                    decoder_attention_mask=batch["decoder_attention_mask"],
+                )
+                sem_loss = torch.zeros((), device=device)
+                loss = outputs.loss
 
         scaler.scale(loss).backward()
         if args.grad_clip > 0:
@@ -240,17 +273,23 @@ def train_one_epoch(
 
         rows = int(batch["keypoints"].size(0))
         total_loss += float(loss.detach().cpu()) * rows
+        total_generation_loss += float(outputs.loss.detach().cpu()) * rows
+        total_semantic_loss += float(sem_loss.detach().cpu()) * rows
         total_rows += rows
 
         if args.print_every and step % args.print_every == 0:
             print(
                 f"step={step} rows={total_rows} "
-                f"loss={total_loss / max(total_rows, 1):.4f}",
+                f"loss={total_loss / max(total_rows, 1):.4f} "
+                f"gen={total_generation_loss / max(total_rows, 1):.4f} "
+                f"sem={total_semantic_loss / max(total_rows, 1):.4f}",
                 flush=True,
             )
 
     return {
         "loss": total_loss / max(total_rows, 1),
+        "generation_loss": total_generation_loss / max(total_rows, 1),
+        "semantic_loss": total_semantic_loss / max(total_rows, 1),
         "rows": float(total_rows),
         "seconds": time.time() - start,
     }
@@ -265,6 +304,8 @@ def evaluate(
 ) -> dict[str, Any]:
     model.eval()
     total_loss = 0.0
+    total_generation_loss = 0.0
+    total_semantic_loss = 0.0
     total_rows = 0
     samples: list[dict[str, str]] = []
     start = time.time()
@@ -272,14 +313,32 @@ def evaluate(
     for batch_index, batch in enumerate(loader):
         raw_batch = batch
         batch = move_batch(batch, device)
-        outputs = model(
-            keypoints=batch["keypoints"],
-            lengths=batch["lengths"],
-            labels=batch["labels"],
-            decoder_attention_mask=batch["decoder_attention_mask"],
+        use_semantic = (
+            args.semantic_loss_weight > 0
+            and "text_embeddings" in batch
         )
+        if use_semantic:
+            outputs, video_embeddings = model.forward_with_semantic(
+                keypoints=batch["keypoints"],
+                lengths=batch["lengths"],
+                labels=batch["labels"],
+                decoder_attention_mask=batch["decoder_attention_mask"],
+            )
+            sem_loss = semantic_alignment_loss(video_embeddings, batch["text_embeddings"])
+            loss = outputs.loss + args.semantic_loss_weight * sem_loss
+        else:
+            outputs = model(
+                keypoints=batch["keypoints"],
+                lengths=batch["lengths"],
+                labels=batch["labels"],
+                decoder_attention_mask=batch["decoder_attention_mask"],
+            )
+            sem_loss = torch.zeros((), device=device)
+            loss = outputs.loss
         rows = int(batch["keypoints"].size(0))
-        total_loss += float(outputs.loss.detach().cpu()) * rows
+        total_loss += float(loss.detach().cpu()) * rows
+        total_generation_loss += float(outputs.loss.detach().cpu()) * rows
+        total_semantic_loss += float(sem_loss.detach().cpu()) * rows
         total_rows += rows
 
         if args.generate_every_epoch and batch_index < args.generate_batches:
@@ -295,6 +354,8 @@ def evaluate(
 
     return {
         "loss": total_loss / max(total_rows, 1),
+        "generation_loss": total_generation_loss / max(total_rows, 1),
+        "semantic_loss": total_semantic_loss / max(total_rows, 1),
         "rows": float(total_rows),
         "seconds": time.time() - start,
         "samples": samples[:10],
@@ -313,11 +374,23 @@ def main() -> None:
         keypoint_heads=args.keypoint_heads,
         downsample_stride=args.downsample_stride,
         dropout=args.dropout,
+        semantic_embedding_dim=args.semantic_embedding_dim,
     ).to(device)
     if args.init_keypoint_encoder is not None:
         init_keypoint_encoder(model, args.init_keypoint_encoder)
     if args.freeze_text_model_epochs > 0:
         set_text_model_trainable(model, False)
+
+    semantic_embeddings = None
+    if args.semantic_text_embeddings is not None:
+        semantic_embeddings = np.load(args.semantic_text_embeddings, mmap_mode="r")
+        if semantic_embeddings.shape[1] != args.semantic_embedding_dim:
+            raise SystemExit(
+                f"Semantic embedding dim is {semantic_embeddings.shape[1]}, "
+                f"but --semantic-embedding-dim is {args.semantic_embedding_dim}."
+            )
+    if args.semantic_loss_weight > 0 and semantic_embeddings is None:
+        raise SystemExit("--semantic-loss-weight > 0 requires --semantic-text-embeddings.")
 
     dataset = SignPose2TextDataset(
         manifest=args.manifest,
@@ -326,6 +399,8 @@ def main() -> None:
         max_frames=args.max_frames,
         sample_mode=args.sample_mode,
         limit=args.limit,
+        text_embeddings=semantic_embeddings,
+        embedding_index=args.semantic_index_csv,
     )
     val_base_dataset = SignPose2TextDataset(
         manifest=args.manifest,
@@ -334,6 +409,8 @@ def main() -> None:
         max_frames=args.max_frames,
         sample_mode="uniform",
         limit=args.limit,
+        text_embeddings=semantic_embeddings,
+        embedding_index=args.semantic_index_csv,
     )
     train_idx, val_idx = split_indices(len(dataset), args.val_ratio, args.seed)
     train_dataset = Subset(dataset, train_idx)
@@ -388,7 +465,11 @@ def main() -> None:
         metrics = {"train": train_metrics, "val": val_metrics}
         print(
             f"train loss={train_metrics['loss']:.4f} "
-            f"val loss={val_metrics['loss']:.4f}",
+            f"train gen={train_metrics['generation_loss']:.4f} "
+            f"train sem={train_metrics['semantic_loss']:.4f} "
+            f"val loss={val_metrics['loss']:.4f} "
+            f"val gen={val_metrics['generation_loss']:.4f} "
+            f"val sem={val_metrics['semantic_loss']:.4f}",
             flush=True,
         )
         for sample in val_metrics.get("samples", []):
