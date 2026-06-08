@@ -36,6 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--max-frames", type=int, default=512)
     parser.add_argument("--max-target-tokens", type=int, default=96)
+    parser.add_argument("--sample-mode", choices=("uniform", "random"), default="uniform")
     parser.add_argument("--lr", type=float, default=3e-5)
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--grad-clip", type=float, default=1.0)
@@ -49,6 +50,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generate-batches", type=int, default=1)
     parser.add_argument("--num-beams", type=int, default=4)
     parser.add_argument("--max-new-tokens", type=int, default=64)
+    parser.add_argument(
+        "--init-keypoint-encoder",
+        type=Path,
+        help="Load matching keypoint encoder weights from a contrastive/pretrained checkpoint.",
+    )
+    parser.add_argument(
+        "--freeze-text-model-epochs",
+        type=int,
+        default=0,
+        help="Freeze the T5 weights for the first N epochs and train only the pose side/bridge.",
+    )
     parser.add_argument("--keypoint-model-dim", type=int, default=256)
     parser.add_argument("--keypoint-layers", type=int, default=4)
     parser.add_argument("--keypoint-heads", type=int, default=4)
@@ -79,6 +91,97 @@ def move_batch(batch: dict[str, Any], device: torch.device) -> dict[str, Any]:
     for key in ("keypoints", "lengths", "labels", "decoder_attention_mask"):
         output[key] = batch[key].to(device, non_blocking=True)
     return output
+
+
+def checkpoint_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:
+    if isinstance(checkpoint, dict):
+        for key in ("model_state", "model", "state_dict"):
+            value = checkpoint.get(key)
+            if isinstance(value, dict):
+                return value
+    if isinstance(checkpoint, dict):
+        return checkpoint
+    raise TypeError(f"Unsupported checkpoint type: {type(checkpoint)!r}")
+
+
+def strip_prefix_state(
+    state: dict[str, torch.Tensor],
+    prefix: str,
+) -> dict[str, torch.Tensor]:
+    output: dict[str, torch.Tensor] = {}
+    for key, value in state.items():
+        if key.startswith(prefix):
+            output[key[len(prefix) :]] = value
+    return output
+
+
+def load_matching_module_state(
+    module: torch.nn.Module,
+    state: dict[str, torch.Tensor],
+) -> tuple[list[str], list[str]]:
+    target = module.state_dict()
+    compatible: dict[str, torch.Tensor] = {}
+    skipped: list[str] = []
+    for key, value in state.items():
+        if key not in target:
+            skipped.append(key)
+            continue
+        if tuple(target[key].shape) != tuple(value.shape):
+            skipped.append(key)
+            continue
+        compatible[key] = value
+
+    module.load_state_dict(compatible, strict=False)
+    missing = [key for key in target if key not in compatible]
+    return sorted(compatible), sorted(missing + skipped)
+
+
+def init_keypoint_encoder(
+    model: ConformerT5SignPose2Text,
+    checkpoint_path: Path,
+) -> None:
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    raw_state = checkpoint_state_dict(checkpoint)
+    candidates = [
+        raw_state,
+        strip_prefix_state(raw_state, "keypoint_encoder."),
+        strip_prefix_state(raw_state, "video_encoder."),
+        strip_prefix_state(raw_state, "encoder."),
+        strip_prefix_state(raw_state, "module."),
+    ]
+
+    best_loaded: list[str] = []
+    best_skipped: list[str] = []
+    best_state: dict[str, torch.Tensor] = {}
+    for candidate in candidates:
+        if not candidate:
+            continue
+        target = model.keypoint_encoder.state_dict()
+        loaded = [
+            key
+            for key, value in candidate.items()
+            if key in target and tuple(target[key].shape) == tuple(value.shape)
+        ]
+        if len(loaded) > len(best_loaded):
+            best_loaded = sorted(loaded)
+            best_state = candidate
+
+    if best_state:
+        best_loaded, best_skipped = load_matching_module_state(model.keypoint_encoder, best_state)
+
+    if not best_loaded:
+        raise SystemExit(f"No compatible keypoint encoder weights found in {checkpoint_path}")
+
+    print(f"initialized keypoint encoder from: {checkpoint_path}")
+    print(f"loaded encoder tensors        : {len(best_loaded)}")
+    print(f"skipped encoder tensors       : {len(best_skipped)}")
+    if best_skipped:
+        print(f"skipped sample                : {best_skipped[:8]}")
+
+
+def set_text_model_trainable(model: ConformerT5SignPose2Text, trainable: bool) -> None:
+    for parameter in model.text_model.parameters():
+        parameter.requires_grad = trainable
 
 
 def save_checkpoint(
@@ -211,8 +314,20 @@ def main() -> None:
         downsample_stride=args.downsample_stride,
         dropout=args.dropout,
     ).to(device)
+    if args.init_keypoint_encoder is not None:
+        init_keypoint_encoder(model, args.init_keypoint_encoder)
+    if args.freeze_text_model_epochs > 0:
+        set_text_model_trainable(model, False)
 
     dataset = SignPose2TextDataset(
+        manifest=args.manifest,
+        text_column=args.text_column,
+        keypoint_column=args.keypoint_column,
+        max_frames=args.max_frames,
+        sample_mode=args.sample_mode,
+        limit=args.limit,
+    )
+    val_base_dataset = SignPose2TextDataset(
         manifest=args.manifest,
         text_column=args.text_column,
         keypoint_column=args.keypoint_column,
@@ -222,7 +337,7 @@ def main() -> None:
     )
     train_idx, val_idx = split_indices(len(dataset), args.val_ratio, args.seed)
     train_dataset = Subset(dataset, train_idx)
-    val_dataset = Subset(dataset, val_idx)
+    val_dataset = Subset(val_base_dataset, val_idx)
     collator = SignPose2TextCollator(
         tokenizer=model.tokenizer,
         max_target_tokens=args.max_target_tokens,
@@ -264,6 +379,10 @@ def main() -> None:
     best_val = float("inf")
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
+        text_trainable = epoch > args.freeze_text_model_epochs
+        set_text_model_trainable(model, text_trainable)
+        if args.freeze_text_model_epochs > 0:
+            print(f"text model trainable: {text_trainable}", flush=True)
         train_metrics = train_one_epoch(model, train_loader, optimizer, device, args)
         val_metrics = evaluate(model, val_loader, device, args)
         metrics = {"train": train_metrics, "val": val_metrics}
