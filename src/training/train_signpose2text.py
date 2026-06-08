@@ -28,6 +28,7 @@ from src.training.signpose2text_dataset import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--val-manifest", type=Path)
     parser.add_argument("--save-dir", type=Path, required=True)
     parser.add_argument("--text-model", default="t5-small")
     parser.add_argument("--text-column", default="canonical_text")
@@ -53,6 +54,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-new-tokens", type=int, default=64)
     parser.add_argument("--semantic-text-embeddings", type=Path)
     parser.add_argument("--semantic-index-csv", type=Path)
+    parser.add_argument("--val-semantic-text-embeddings", type=Path)
+    parser.add_argument("--val-semantic-index-csv", type=Path)
     parser.add_argument("--semantic-loss-weight", type=float, default=0.0)
     parser.add_argument("--semantic-embedding-dim", type=int, default=384)
     parser.add_argument(
@@ -392,6 +395,15 @@ def main() -> None:
     if args.semantic_loss_weight > 0 and semantic_embeddings is None:
         raise SystemExit("--semantic-loss-weight > 0 requires --semantic-text-embeddings.")
 
+    val_semantic_embeddings = semantic_embeddings
+    if args.val_semantic_text_embeddings is not None:
+        val_semantic_embeddings = np.load(args.val_semantic_text_embeddings, mmap_mode="r")
+        if val_semantic_embeddings.shape[1] != args.semantic_embedding_dim:
+            raise SystemExit(
+                f"Val semantic embedding dim is {val_semantic_embeddings.shape[1]}, "
+                f"but --semantic-embedding-dim is {args.semantic_embedding_dim}."
+            )
+
     dataset = SignPose2TextDataset(
         manifest=args.manifest,
         text_column=args.text_column,
@@ -402,19 +414,24 @@ def main() -> None:
         text_embeddings=semantic_embeddings,
         embedding_index=args.semantic_index_csv,
     )
+    val_manifest = args.val_manifest or args.manifest
     val_base_dataset = SignPose2TextDataset(
-        manifest=args.manifest,
+        manifest=val_manifest,
         text_column=args.text_column,
         keypoint_column=args.keypoint_column,
         max_frames=args.max_frames,
         sample_mode="uniform",
         limit=args.limit,
-        text_embeddings=semantic_embeddings,
-        embedding_index=args.semantic_index_csv,
+        text_embeddings=val_semantic_embeddings,
+        embedding_index=args.val_semantic_index_csv or args.semantic_index_csv,
     )
-    train_idx, val_idx = split_indices(len(dataset), args.val_ratio, args.seed)
-    train_dataset = Subset(dataset, train_idx)
-    val_dataset = Subset(val_base_dataset, val_idx)
+    if args.val_manifest is None:
+        train_idx, val_idx = split_indices(len(dataset), args.val_ratio, args.seed)
+        train_dataset = Subset(dataset, train_idx)
+        val_dataset = Subset(val_base_dataset, val_idx)
+    else:
+        train_dataset = dataset
+        val_dataset = val_base_dataset
     collator = SignPose2TextCollator(
         tokenizer=model.tokenizer,
         max_target_tokens=args.max_target_tokens,
