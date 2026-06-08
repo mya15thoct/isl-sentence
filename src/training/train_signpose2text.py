@@ -57,6 +57,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--val-semantic-text-embeddings", type=Path)
     parser.add_argument("--val-semantic-index-csv", type=Path)
     parser.add_argument("--semantic-loss-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--semantic-loss-type",
+        choices=("cosine", "contrastive", "both"),
+        default="contrastive",
+    )
+    parser.add_argument("--semantic-temperature", type=float, default=0.07)
     parser.add_argument("--semantic-embedding-dim", type=int, default=384)
     parser.add_argument(
         "--init-keypoint-encoder",
@@ -106,10 +112,25 @@ def move_batch(batch: dict[str, Any], device: torch.device) -> dict[str, Any]:
 def semantic_alignment_loss(
     video_embeddings: torch.Tensor,
     text_embeddings: torch.Tensor,
+    loss_type: str = "contrastive",
+    temperature: float = 0.07,
 ) -> torch.Tensor:
     text_embeddings = F.normalize(text_embeddings.float(), dim=-1, eps=1e-6)
     video_embeddings = F.normalize(video_embeddings.float(), dim=-1, eps=1e-6)
-    return 1.0 - torch.sum(video_embeddings * text_embeddings, dim=-1).mean()
+    cosine_loss = 1.0 - torch.sum(video_embeddings * text_embeddings, dim=-1).mean()
+    if loss_type == "cosine":
+        return cosine_loss
+
+    logits = video_embeddings @ text_embeddings.T
+    logits = logits / max(temperature, 1e-6)
+    labels = torch.arange(logits.size(0), device=logits.device)
+    contrastive_loss = 0.5 * (
+        F.cross_entropy(logits, labels)
+        + F.cross_entropy(logits.T, labels)
+    )
+    if loss_type == "contrastive":
+        return contrastive_loss
+    return cosine_loss + contrastive_loss
 
 
 def checkpoint_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:
@@ -255,7 +276,12 @@ def train_one_epoch(
                     labels=batch["labels"],
                     decoder_attention_mask=batch["decoder_attention_mask"],
                 )
-                sem_loss = semantic_alignment_loss(video_embeddings, batch["text_embeddings"])
+                sem_loss = semantic_alignment_loss(
+                    video_embeddings,
+                    batch["text_embeddings"],
+                    loss_type=args.semantic_loss_type,
+                    temperature=args.semantic_temperature,
+                )
                 loss = outputs.loss + args.semantic_loss_weight * sem_loss
             else:
                 outputs = model(
@@ -327,7 +353,12 @@ def evaluate(
                 labels=batch["labels"],
                 decoder_attention_mask=batch["decoder_attention_mask"],
             )
-            sem_loss = semantic_alignment_loss(video_embeddings, batch["text_embeddings"])
+            sem_loss = semantic_alignment_loss(
+                video_embeddings,
+                batch["text_embeddings"],
+                loss_type=args.semantic_loss_type,
+                temperature=args.semantic_temperature,
+            )
             loss = outputs.loss + args.semantic_loss_weight * sem_loss
         else:
             outputs = model(
