@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import sys
 import time
@@ -68,6 +69,28 @@ def parse_args() -> argparse.Namespace:
         default=1.0,
         help="Exponent applied to off-diagonal text similarity weights.",
     )
+    parser.add_argument(
+        "--semantic-graph",
+        type=Path,
+        help="Optional train semantic graph .npz from src/text/build_text_semantic_graph.py.",
+    )
+    parser.add_argument(
+        "--val-semantic-graph",
+        type=Path,
+        help="Optional val semantic graph .npz. If omitted, val global loss uses exact positives.",
+    )
+    parser.add_argument(
+        "--global-text-loss-weight",
+        type=float,
+        default=0.0,
+        help="Blend batch loss with full text-bank loss. 0 keeps in-batch training.",
+    )
+    parser.add_argument(
+        "--global-semantic-weight",
+        type=float,
+        default=0.5,
+        help="Inside text-bank loss, blend exact CE with semantic multi-positive loss.",
+    )
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--limit", type=int)
@@ -83,6 +106,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--downsample-stride", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
     return parser.parse_args()
+
+
+@dataclass
+class AlignmentContext:
+    text_bank: torch.Tensor
+    positive_ids: torch.Tensor | None = None
+    positive_weights: torch.Tensor | None = None
 
 
 def set_seed(seed: int) -> None:
@@ -171,6 +201,50 @@ def semantic_positive_targets(
     return weights
 
 
+def global_text_bank_loss(
+    video_embeddings: torch.Tensor,
+    labels: torch.Tensor,
+    context: AlignmentContext,
+    temperature: float,
+    semantic_weight: float,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    video_embeddings = F.normalize(video_embeddings.float(), dim=-1, eps=1e-6)
+    text_bank = F.normalize(context.text_bank.float(), dim=-1, eps=1e-6)
+    logits = video_embeddings @ text_bank.T
+    logits = logits / max(temperature, 1e-6)
+    labels = labels.to(device=logits.device, dtype=torch.long)
+    exact_loss = F.cross_entropy(logits, labels)
+
+    semantic_loss = exact_loss
+    positive_pairs_per_row = 1.0
+    if context.positive_ids is not None and context.positive_weights is not None:
+        positive_ids = context.positive_ids[labels]
+        positive_weights = context.positive_weights[labels].to(logits.device)
+        valid_mask = positive_ids >= 0
+        safe_ids = positive_ids.clamp_min(0)
+        positive_logits = logits.gather(1, safe_ids)
+        positive_weights = positive_weights.masked_fill(~valid_mask, 0.0)
+        positive_weights = positive_weights / positive_weights.sum(dim=1, keepdim=True).clamp_min(1e-6)
+        weighted_positive_logits = positive_logits + torch.log(positive_weights.clamp_min(1e-12))
+        weighted_positive_logits = weighted_positive_logits.masked_fill(~valid_mask, torch.finfo(logits.dtype).min)
+        numerator = torch.logsumexp(weighted_positive_logits, dim=1)
+        denominator = torch.logsumexp(logits, dim=1)
+        semantic_loss = -(numerator - denominator).mean()
+        with torch.no_grad():
+            positive_pairs_per_row = float(valid_mask.float().sum(dim=1).mean().item())
+
+    weight = min(max(float(semantic_weight), 0.0), 1.0)
+    loss = (1.0 - weight) * exact_loss + weight * semantic_loss
+    with torch.no_grad():
+        v2t_acc = (logits.argmax(dim=1) == labels).float().mean().item()
+    return loss, {
+        "global_exact_loss": float(exact_loss.detach().cpu()),
+        "global_semantic_loss": float(semantic_loss.detach().cpu()),
+        "global_v2t_acc": v2t_acc,
+        "global_positive_pairs_per_row": positive_pairs_per_row,
+    }
+
+
 def model_state(model: nn.Module) -> dict[str, torch.Tensor]:
     if isinstance(model, nn.DataParallel):
         return model.module.state_dict()
@@ -200,7 +274,7 @@ def save_checkpoint(
 
 def move_batch(batch: dict[str, object], device: torch.device) -> dict[str, object]:
     output = dict(batch)
-    for key in ("keypoints", "lengths", "text_embeddings"):
+    for key in ("keypoints", "lengths", "text_embeddings", "embedding_ids"):
         output[key] = batch[key].to(device, non_blocking=True)  # type: ignore[union-attr]
     return output
 
@@ -212,6 +286,7 @@ def run_epoch(
     args: argparse.Namespace,
     optimizer: torch.optim.Optimizer | None,
     scaler: torch.cuda.amp.GradScaler | None,
+    context: AlignmentContext | None = None,
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
@@ -222,6 +297,9 @@ def run_epoch(
         "hard_loss": 0.0,
         "semantic_loss": 0.0,
         "positive_pairs_per_row": 0.0,
+        "global_loss": 0.0,
+        "global_v2t_acc": 0.0,
+        "global_positive_pairs_per_row": 0.0,
     }
     rows_seen = 0
     start = time.time()
@@ -243,6 +321,22 @@ def run_epoch(
                 semantic_positive_top_k=args.semantic_positive_top_k,
                 semantic_positive_power=args.semantic_positive_power,
             )
+            if context is not None and args.global_text_loss_weight > 0:
+                global_loss, global_metrics = global_text_bank_loss(
+                    video_embeddings=video_embeddings,
+                    labels=batch["embedding_ids"],
+                    context=context,
+                    temperature=args.temperature,
+                    semantic_weight=args.global_semantic_weight,
+                )
+                weight = min(max(float(args.global_text_loss_weight), 0.0), 1.0)
+                loss = (1.0 - weight) * loss + weight * global_loss
+                metrics.update(global_metrics)
+                metrics["global_loss"] = float(global_loss.detach().cpu())
+            else:
+                metrics["global_loss"] = 0.0
+                metrics["global_v2t_acc"] = 0.0
+                metrics["global_positive_pairs_per_row"] = 0.0
 
         if training:
             assert optimizer is not None
@@ -262,6 +356,9 @@ def run_epoch(
         totals["hard_loss"] += metrics["hard_loss"] * batch_size
         totals["semantic_loss"] += metrics["semantic_loss"] * batch_size
         totals["positive_pairs_per_row"] += metrics["positive_pairs_per_row"] * batch_size
+        totals["global_loss"] += metrics["global_loss"] * batch_size
+        totals["global_v2t_acc"] += metrics["global_v2t_acc"] * batch_size
+        totals["global_positive_pairs_per_row"] += metrics["global_positive_pairs_per_row"] * batch_size
 
         if training and args.print_every and step % args.print_every == 0:
             print(
@@ -269,7 +366,9 @@ def run_epoch(
                 f"loss={totals['loss'] / rows_seen:.4f} "
                 f"v2t={totals['v2t_acc'] / rows_seen:.3f} "
                 f"t2v={totals['t2v_acc'] / rows_seen:.3f} "
-                f"pos={totals['positive_pairs_per_row'] / rows_seen:.2f}",
+                f"pos={totals['positive_pairs_per_row'] / rows_seen:.2f} "
+                f"gb_v2t={totals['global_v2t_acc'] / rows_seen:.3f} "
+                f"gb_pos={totals['global_positive_pairs_per_row'] / rows_seen:.2f}",
                 flush=True,
             )
         if not training and args.eval_max_batches > 0 and step >= args.eval_max_batches:
@@ -282,6 +381,9 @@ def run_epoch(
         "hard_loss": totals["hard_loss"] / max(rows_seen, 1),
         "semantic_loss": totals["semantic_loss"] / max(rows_seen, 1),
         "positive_pairs_per_row": totals["positive_pairs_per_row"] / max(rows_seen, 1),
+        "global_loss": totals["global_loss"] / max(rows_seen, 1),
+        "global_v2t_acc": totals["global_v2t_acc"] / max(rows_seen, 1),
+        "global_positive_pairs_per_row": totals["global_positive_pairs_per_row"] / max(rows_seen, 1),
         "rows": float(rows_seen),
         "seconds": time.time() - start,
     }
@@ -309,6 +411,45 @@ def build_dataset(
         max_frames=args.max_frames,
         sample_mode=sample_mode,
         limit=args.limit,
+    )
+
+
+def load_alignment_context(
+    embeddings: Path,
+    graph_path: Path | None,
+    args: argparse.Namespace,
+    device: torch.device,
+) -> AlignmentContext:
+    text_embeddings = np.load(embeddings, mmap_mode="r")
+    if text_embeddings.shape[1] != args.projection_dim:
+        raise SystemExit(
+            f"Text embedding dim is {text_embeddings.shape[1]}, "
+            f"but projection_dim is {args.projection_dim}."
+        )
+    text_bank_array = np.asarray(text_embeddings, dtype=np.float32).copy()
+    np.nan_to_num(text_bank_array, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+    text_bank = torch.from_numpy(text_bank_array).to(device)
+    text_bank = F.normalize(text_bank.float(), dim=-1, eps=1e-6)
+
+    positive_ids = None
+    positive_weights = None
+    if graph_path is not None:
+        graph = np.load(graph_path)
+        ids = np.asarray(graph["positive_ids"], dtype=np.int64).copy()
+        weights = np.asarray(graph["positive_weights"], dtype=np.float32).copy()
+        if ids.shape != weights.shape:
+            raise SystemExit(f"Bad semantic graph shapes: ids={ids.shape}, weights={weights.shape}.")
+        if ids.shape[0] != text_bank.size(0):
+            raise SystemExit(
+                f"Semantic graph has {ids.shape[0]} rows, but text bank has {text_bank.size(0)} rows."
+            )
+        positive_ids = torch.from_numpy(ids).to(device)
+        positive_weights = torch.from_numpy(weights).to(device)
+
+    return AlignmentContext(
+        text_bank=text_bank,
+        positive_ids=positive_ids,
+        positive_weights=positive_weights,
     )
 
 
@@ -354,6 +495,18 @@ def main() -> None:
             pin_memory=device.type == "cuda",
         )
 
+    train_context = None
+    val_context = None
+    if args.global_text_loss_weight > 0:
+        train_context = load_alignment_context(args.text_embeddings, args.semantic_graph, args, device)
+        if val_dataset is not None:
+            val_context = load_alignment_context(
+                args.val_text_embeddings or args.text_embeddings,
+                args.val_semantic_graph,
+                args,
+                device,
+            )
+
     model: nn.Module = KeypointConformerEncoder(
         model_dim=args.model_dim,
         projection_dim=args.projection_dim,
@@ -378,26 +531,32 @@ def main() -> None:
     print(f"val rows   : {len(val_dataset) if val_dataset is not None else 0}")
     print(f"device     : {device}")
     print(f"gpus       : {torch.cuda.device_count() if device.type == 'cuda' else 0}")
+    print(f"global text: {args.global_text_loss_weight > 0}")
+    if train_context is not None:
+        print(f"text bank  : {tuple(train_context.text_bank.shape)}")
+        print(f"text graph : {args.semantic_graph or 'exact-only'}")
     print(f"save dir   : {args.save_dir}")
 
     best_val = float("inf")
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
-        train_metrics = run_epoch(model, train_loader, device, args, optimizer, scaler)
+        train_metrics = run_epoch(model, train_loader, device, args, optimizer, scaler, train_context)
         metrics: dict[str, Any] = {"train": train_metrics}
         print(
             "train "
             f"loss={train_metrics['loss']:.4f} "
             f"v2t={train_metrics['v2t_acc']:.3f} "
             f"t2v={train_metrics['t2v_acc']:.3f} "
-            f"pos={train_metrics['positive_pairs_per_row']:.2f}",
+            f"pos={train_metrics['positive_pairs_per_row']:.2f} "
+            f"gb_v2t={train_metrics['global_v2t_acc']:.3f} "
+            f"gb_pos={train_metrics['global_positive_pairs_per_row']:.2f}",
             flush=True,
         )
 
         val_loss = train_metrics["loss"]
         if val_loader is not None:
             with torch.no_grad():
-                val_metrics = run_epoch(model, val_loader, device, args, None, None)
+                val_metrics = run_epoch(model, val_loader, device, args, None, None, val_context)
             metrics["val"] = val_metrics
             val_loss = val_metrics["loss"]
             print(
@@ -405,7 +564,9 @@ def main() -> None:
                 f"loss={val_metrics['loss']:.4f} "
                 f"v2t={val_metrics['v2t_acc']:.3f} "
                 f"t2v={val_metrics['t2v_acc']:.3f} "
-                f"pos={val_metrics['positive_pairs_per_row']:.2f}",
+                f"pos={val_metrics['positive_pairs_per_row']:.2f} "
+                f"gb_v2t={val_metrics['global_v2t_acc']:.3f} "
+                f"gb_pos={val_metrics['global_positive_pairs_per_row']:.2f}",
                 flush=True,
             )
 
