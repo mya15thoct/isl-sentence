@@ -45,7 +45,7 @@ def read_manifest(path: Path) -> list[dict[str, str]]:
 def write_csv(path: Path, rows: list[dict[str, str]], fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -151,7 +151,7 @@ def main() -> None:
             "quality_flag",
     ]
     for field in PASSTHROUGH_FIELDS:
-        if any(row.get(field, "") for row in rows):
+        if field not in fieldnames:
             fieldnames.append(field)
     write_csv(index_path, rows, fieldnames)
 
