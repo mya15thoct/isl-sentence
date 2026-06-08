@@ -20,6 +20,7 @@ if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.modeling.keypoint_conformer import KeypointConformerEncoder
+from src.training.keypoint_augmentation import augmentation_methods
 from src.training.video_text_alignment_dataset import (
     VideoTextAlignmentDataset,
     collate_video_text_alignment,
@@ -42,6 +43,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--max-frames", type=int, default=512)
     parser.add_argument("--sample-mode", choices=("uniform", "center", "random"), default="random")
+    parser.add_argument("--augment", action="store_true")
+    parser.add_argument("--augment-prob", type=float, default=0.75)
+    parser.add_argument(
+        "--augment-methods",
+        nargs="+",
+        choices=augmentation_methods(),
+        default=["noise", "subsample", "scale", "crop", "jitter"],
+    )
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
@@ -395,6 +404,7 @@ def build_dataset(
     index: Path,
     args: argparse.Namespace,
     sample_mode: str,
+    augment: bool,
 ) -> VideoTextAlignmentDataset:
     text_embeddings = np.load(embeddings, mmap_mode="r")
     if text_embeddings.shape[1] != args.projection_dim:
@@ -411,6 +421,9 @@ def build_dataset(
         max_frames=args.max_frames,
         sample_mode=sample_mode,
         limit=args.limit,
+        augment=augment,
+        augment_probability=args.augment_prob,
+        augment_methods=args.augment_methods,
     )
 
 
@@ -464,6 +477,7 @@ def main() -> None:
         args.embedding_index,
         args,
         sample_mode=args.sample_mode,
+        augment=args.augment,
     )
     val_dataset = None
     if args.val_manifest is not None:
@@ -473,6 +487,7 @@ def main() -> None:
             args.val_embedding_index or args.embedding_index,
             args,
             sample_mode="uniform",
+            augment=False,
         )
 
     train_loader = DataLoader(
@@ -532,6 +547,7 @@ def main() -> None:
     print(f"device     : {device}")
     print(f"gpus       : {torch.cuda.device_count() if device.type == 'cuda' else 0}")
     print(f"global text: {args.global_text_loss_weight > 0}")
+    print(f"augment    : {args.augment} {args.augment_methods if args.augment else ''}")
     if train_context is not None:
         print(f"text bank  : {tuple(train_context.text_bank.shape)}")
         print(f"text graph : {args.semantic_graph or 'exact-only'}")

@@ -11,6 +11,8 @@ import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
+from src.training.keypoint_augmentation import augment_sequence
+
 
 KEYPOINT_DIM = 1662
 
@@ -66,6 +68,9 @@ class VideoTextAlignmentDataset(torch.utils.data.Dataset[VideoTextAlignmentSampl
         max_frames: int = 512,
         sample_mode: str = "uniform",
         limit: int | None = None,
+        augment: bool = False,
+        augment_probability: float = 0.75,
+        augment_methods: list[str] | None = None,
     ) -> None:
         rows = read_csv(manifest)
         if limit is not None:
@@ -87,6 +92,9 @@ class VideoTextAlignmentDataset(torch.utils.data.Dataset[VideoTextAlignmentSampl
         self.keypoint_column = keypoint_column
         self.max_frames = max_frames
         self.sample_mode = sample_mode
+        self.augment = augment
+        self.augment_probability = augment_probability
+        self.augment_methods = augment_methods or []
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -100,6 +108,12 @@ class VideoTextAlignmentDataset(torch.utils.data.Dataset[VideoTextAlignmentSampl
             raise ValueError(f"Bad keypoint shape for {keypoint_path}: {keypoints.shape}")
 
         keypoints = np.nan_to_num(keypoints, copy=False).astype(np.float32, copy=False)
+        if self.augment:
+            keypoints = augment_sequence(
+                keypoints,
+                methods=self.augment_methods,
+                probability=self.augment_probability,
+            )
         keypoints = sample_keypoints(keypoints, self.max_frames, self.sample_mode)
         embedding_id = self.embedding_by_source_row[source_row]
         text_embedding = self.text_embeddings[embedding_id].astype(np.float32, copy=True)
