@@ -21,6 +21,7 @@ class VideoTextAlignmentSample:
     text: str
     keypoints: torch.Tensor
     text_embedding: torch.Tensor
+    embedding_id: int
     source_row: int
 
 
@@ -109,6 +110,7 @@ class VideoTextAlignmentDataset(torch.utils.data.Dataset[VideoTextAlignmentSampl
             text=row[self.text_column],
             keypoints=torch.from_numpy(keypoints.copy()),
             text_embedding=torch.from_numpy(text_embedding),
+            embedding_id=embedding_id,
             source_row=source_row,
         )
 
@@ -123,6 +125,7 @@ def collate_video_text_alignment(
         "uids": [item.uid for item in batch],
         "texts": [item.text for item in batch],
         "source_rows": torch.tensor([item.source_row for item in batch], dtype=torch.long),
+        "embedding_ids": torch.tensor([item.embedding_id for item in batch], dtype=torch.long),
         "keypoints": keypoints,
         "lengths": lengths,
         "text_embeddings": text_embeddings,

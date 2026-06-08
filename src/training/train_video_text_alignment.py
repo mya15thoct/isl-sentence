@@ -44,6 +44,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
+    parser.add_argument(
+        "--semantic-positive-weight",
+        type=float,
+        default=0.0,
+        help="Blend in semantic multi-positive loss based on text-text similarity.",
+    )
+    parser.add_argument(
+        "--semantic-positive-threshold",
+        type=float,
+        default=0.82,
+        help="Text cosine threshold for off-diagonal positives inside each batch.",
+    )
+    parser.add_argument(
+        "--semantic-positive-top-k",
+        type=int,
+        default=0,
+        help="Also keep the top-k most similar text items in the batch as soft positives.",
+    )
+    parser.add_argument(
+        "--semantic-positive-power",
+        type=float,
+        default=1.0,
+        help="Exponent applied to off-diagonal text similarity weights.",
+    )
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--limit", type=int)
@@ -71,15 +95,38 @@ def contrastive_loss(
     video_embeddings: torch.Tensor,
     text_embeddings: torch.Tensor,
     temperature: float,
+    semantic_positive_weight: float = 0.0,
+    semantic_positive_threshold: float = 0.82,
+    semantic_positive_top_k: int = 0,
+    semantic_positive_power: float = 1.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     video_embeddings = F.normalize(video_embeddings.float(), dim=-1, eps=1e-6)
     text_embeddings = F.normalize(text_embeddings.float(), dim=-1, eps=1e-6)
     logits = video_embeddings @ text_embeddings.T
     logits = logits / max(temperature, 1e-6)
     labels = torch.arange(logits.size(0), device=logits.device)
-    v2t_loss = F.cross_entropy(logits, labels)
-    t2v_loss = F.cross_entropy(logits.T, labels)
-    loss = 0.5 * (v2t_loss + t2v_loss)
+    hard_v2t_loss = F.cross_entropy(logits, labels)
+    hard_t2v_loss = F.cross_entropy(logits.T, labels)
+    hard_loss = 0.5 * (hard_v2t_loss + hard_t2v_loss)
+
+    semantic_loss = torch.zeros((), device=logits.device)
+    positive_pairs_per_row = 1.0
+    if semantic_positive_weight > 0:
+        positive_targets = semantic_positive_targets(
+            text_embeddings,
+            threshold=semantic_positive_threshold,
+            top_k=semantic_positive_top_k,
+            power=semantic_positive_power,
+        )
+        semantic_v2t_loss = soft_cross_entropy(logits, positive_targets)
+        semantic_t2v_loss = soft_cross_entropy(logits.T, positive_targets)
+        semantic_loss = 0.5 * (semantic_v2t_loss + semantic_t2v_loss)
+        weight = min(max(float(semantic_positive_weight), 0.0), 1.0)
+        loss = (1.0 - weight) * hard_loss + weight * semantic_loss
+        with torch.no_grad():
+            positive_pairs_per_row = float((positive_targets > 0).sum(dim=1).float().mean().item())
+    else:
+        loss = hard_loss
 
     with torch.no_grad():
         v2t_acc = (logits.argmax(dim=1) == labels).float().mean().item()
@@ -87,9 +134,41 @@ def contrastive_loss(
     return loss, {
         "v2t_acc": v2t_acc,
         "t2v_acc": t2v_acc,
-        "v2t_loss": float(v2t_loss.detach().cpu()),
-        "t2v_loss": float(t2v_loss.detach().cpu()),
+        "hard_loss": float(hard_loss.detach().cpu()),
+        "semantic_loss": float(semantic_loss.detach().cpu()),
+        "positive_pairs_per_row": positive_pairs_per_row,
     }
+
+
+def soft_cross_entropy(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    log_probs = F.log_softmax(logits, dim=1)
+    return -(targets * log_probs).sum(dim=1).mean()
+
+
+def semantic_positive_targets(
+    text_embeddings: torch.Tensor,
+    threshold: float,
+    top_k: int,
+    power: float,
+) -> torch.Tensor:
+    similarity = text_embeddings @ text_embeddings.T
+    batch_size = similarity.size(0)
+    diagonal = torch.eye(batch_size, device=similarity.device, dtype=torch.bool)
+    positive_mask = diagonal | (similarity >= threshold)
+
+    if top_k > 0 and batch_size > 1:
+        k = min(top_k + 1, batch_size)
+        _, indices = torch.topk(similarity, k=k, dim=1)
+        topk_mask = torch.zeros_like(positive_mask)
+        topk_mask.scatter_(1, indices, True)
+        positive_mask = positive_mask | topk_mask
+
+    weights = torch.where(positive_mask, similarity.clamp_min(0.0), torch.zeros_like(similarity))
+    if power != 1.0:
+        weights = weights.pow(power)
+    weights = torch.where(diagonal, torch.ones_like(weights), weights)
+    weights = weights / weights.sum(dim=1, keepdim=True).clamp_min(1e-6)
+    return weights
 
 
 def model_state(model: nn.Module) -> dict[str, torch.Tensor]:
@@ -136,7 +215,14 @@ def run_epoch(
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
-    totals = {"loss": 0.0, "v2t_acc": 0.0, "t2v_acc": 0.0}
+    totals = {
+        "loss": 0.0,
+        "v2t_acc": 0.0,
+        "t2v_acc": 0.0,
+        "hard_loss": 0.0,
+        "semantic_loss": 0.0,
+        "positive_pairs_per_row": 0.0,
+    }
     rows_seen = 0
     start = time.time()
 
@@ -152,6 +238,10 @@ def run_epoch(
                 video_embeddings,
                 batch["text_embeddings"],
                 args.temperature,
+                semantic_positive_weight=args.semantic_positive_weight,
+                semantic_positive_threshold=args.semantic_positive_threshold,
+                semantic_positive_top_k=args.semantic_positive_top_k,
+                semantic_positive_power=args.semantic_positive_power,
             )
 
         if training:
@@ -169,13 +259,17 @@ def run_epoch(
         totals["loss"] += float(loss.detach().cpu()) * batch_size
         totals["v2t_acc"] += metrics["v2t_acc"] * batch_size
         totals["t2v_acc"] += metrics["t2v_acc"] * batch_size
+        totals["hard_loss"] += metrics["hard_loss"] * batch_size
+        totals["semantic_loss"] += metrics["semantic_loss"] * batch_size
+        totals["positive_pairs_per_row"] += metrics["positive_pairs_per_row"] * batch_size
 
         if training and args.print_every and step % args.print_every == 0:
             print(
                 f"step={step} rows={rows_seen} "
                 f"loss={totals['loss'] / rows_seen:.4f} "
                 f"v2t={totals['v2t_acc'] / rows_seen:.3f} "
-                f"t2v={totals['t2v_acc'] / rows_seen:.3f}",
+                f"t2v={totals['t2v_acc'] / rows_seen:.3f} "
+                f"pos={totals['positive_pairs_per_row'] / rows_seen:.2f}",
                 flush=True,
             )
         if not training and args.eval_max_batches > 0 and step >= args.eval_max_batches:
@@ -185,6 +279,9 @@ def run_epoch(
         "loss": totals["loss"] / max(rows_seen, 1),
         "v2t_acc": totals["v2t_acc"] / max(rows_seen, 1),
         "t2v_acc": totals["t2v_acc"] / max(rows_seen, 1),
+        "hard_loss": totals["hard_loss"] / max(rows_seen, 1),
+        "semantic_loss": totals["semantic_loss"] / max(rows_seen, 1),
+        "positive_pairs_per_row": totals["positive_pairs_per_row"] / max(rows_seen, 1),
         "rows": float(rows_seen),
         "seconds": time.time() - start,
     }
@@ -292,7 +389,8 @@ def main() -> None:
             "train "
             f"loss={train_metrics['loss']:.4f} "
             f"v2t={train_metrics['v2t_acc']:.3f} "
-            f"t2v={train_metrics['t2v_acc']:.3f}",
+            f"t2v={train_metrics['t2v_acc']:.3f} "
+            f"pos={train_metrics['positive_pairs_per_row']:.2f}",
             flush=True,
         )
 
@@ -306,7 +404,8 @@ def main() -> None:
                 "val   "
                 f"loss={val_metrics['loss']:.4f} "
                 f"v2t={val_metrics['v2t_acc']:.3f} "
-                f"t2v={val_metrics['t2v_acc']:.3f}",
+                f"t2v={val_metrics['t2v_acc']:.3f} "
+                f"pos={val_metrics['positive_pairs_per_row']:.2f}",
                 flush=True,
             )
 
