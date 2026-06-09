@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from src.training.keypoint_augmentation import augment_sequence
+from src.keypoints.augmentation import augment_sequence
 
 
 KEYPOINT_DIM = 1662
@@ -143,4 +143,93 @@ def collate_video_text_alignment(
         "keypoints": keypoints,
         "lengths": lengths,
         "text_embeddings": text_embeddings,
+    }
+
+
+@dataclass(frozen=True)
+class RetrievalSample:
+    uid: str
+    text: str
+    keypoints: torch.Tensor
+    source_row: int
+
+
+class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
+    """End-to-end retrieval dataset: yields keypoints and the raw caption.
+
+    Unlike :class:`VideoTextAlignmentDataset`, no precomputed text embeddings are
+    needed - the caption text is tokenized and encoded by a trainable text
+    encoder during training.
+    """
+
+    def __init__(
+        self,
+        manifest: Path,
+        text_column: str = "canonical_text",
+        keypoint_column: str = "keypoint_path",
+        max_frames: int = 512,
+        sample_mode: str = "uniform",
+        limit: int | None = None,
+        augment: bool = False,
+        augment_probability: float = 0.75,
+        augment_methods: list[str] | None = None,
+    ) -> None:
+        rows = read_csv(manifest)
+        if limit is not None:
+            rows = rows[:limit]
+
+        self.rows: list[dict[str, str]] = []
+        for source_row, row in enumerate(rows):
+            text = row.get(text_column, "").strip()
+            keypoint_path = row.get(keypoint_column, "").strip()
+            if not text or not keypoint_path:
+                continue
+            next_row = dict(row)
+            next_row["_source_row"] = str(source_row)
+            self.rows.append(next_row)
+
+        self.text_column = text_column
+        self.keypoint_column = keypoint_column
+        self.max_frames = max_frames
+        self.sample_mode = sample_mode
+        self.augment = augment
+        self.augment_probability = augment_probability
+        self.augment_methods = augment_methods or []
+
+    def __len__(self) -> int:
+        return len(self.rows)
+
+    def __getitem__(self, index: int) -> RetrievalSample:
+        row = self.rows[index]
+        keypoint_path = Path(row[self.keypoint_column])
+        keypoints = np.load(keypoint_path)
+        if keypoints.ndim != 2 or keypoints.shape[1] != KEYPOINT_DIM:
+            raise ValueError(f"Bad keypoint shape for {keypoint_path}: {keypoints.shape}")
+
+        keypoints = np.nan_to_num(keypoints, copy=False).astype(np.float32, copy=False)
+        if self.augment:
+            keypoints = augment_sequence(
+                keypoints,
+                methods=self.augment_methods,
+                probability=self.augment_probability,
+            )
+        keypoints = sample_keypoints(keypoints, self.max_frames, self.sample_mode)
+
+        return RetrievalSample(
+            uid=row.get("uid", ""),
+            text=row[self.text_column],
+            keypoints=torch.from_numpy(keypoints.copy()),
+            source_row=int(row["_source_row"]),
+        )
+
+
+def collate_retrieval(batch: list[RetrievalSample]) -> dict[str, object]:
+    lengths = torch.tensor([item.keypoints.size(0) for item in batch], dtype=torch.long)
+    keypoints = pad_sequence([item.keypoints for item in batch], batch_first=True)
+    return {
+        "uids": [item.uid for item in batch],
+        "texts": [item.text for item in batch],
+        "source_rows": torch.tensor([item.source_row for item in batch], dtype=torch.long),
+        "keypoints": keypoints,
+        "lengths": lengths,
     }

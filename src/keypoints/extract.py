@@ -24,12 +24,12 @@ from pathlib import Path
 import numpy as np
 
 try:
-    from src.video.holistic_keypoints import (
+    from src.keypoints.holistic import (
         create_holistic_model,
         extract_video_keypoints,
     )
 except ImportError:
-    from holistic_keypoints import create_holistic_model, extract_video_keypoints
+    from holistic import create_holistic_model, extract_video_keypoints
 
 
 VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm")

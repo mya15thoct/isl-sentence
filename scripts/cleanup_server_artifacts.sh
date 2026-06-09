@@ -51,15 +51,20 @@ collect_candidates() {
        -o -name "*prototype*" \
        -o -name "*resume*" \
        -o -name "*relation_aware*" \
-       -o -name "isign_relation_*" \) \
+       -o -name "isign_relation_*" \
+       -o -name "signpose2text_*" \) \
     -print 2>/dev/null || true
 
+  # Generation (signpose2text) is retired; drop its TRAINING logs only.
+  # pred_signpose2text_*.csv and eval_signpose2text_*.json are kept on purpose
+  # as the reported generation baseline for the paper.
   find "$ROOT/logs" -maxdepth 1 \
     \( -name "train_target_*.log" \
        -o -name "*resume*.log" \
        -o -name "*prototype*" \
        -o -name "eval_retrieval_*" \
-       -o -name "train_isign_relation_*.log" \) \
+       -o -name "train_isign_relation_*.log" \
+       -o -name "train_signpose2text_*.log" \) \
     -print 2>/dev/null || true
 
   find "$ROOT/text_embeddings" -maxdepth 1 \

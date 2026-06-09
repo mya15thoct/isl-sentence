@@ -5,7 +5,7 @@ This is used for auxiliary semantic supervision in SignPose2Text experiments:
   text -> MiniLM/Sentence-BERT -> fixed text embedding
 
 Example:
-  python src/text/build_text_embeddings.py \
+  python src/text/embeddings.py \
       --manifest data/subsets/isign_examples.csv \
                  data/subsets/isign_descriptions.csv \
                  data/subsets/isign_general_sentences.csv \

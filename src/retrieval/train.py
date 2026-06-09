@@ -1,0 +1,337 @@
+"""End-to-end contrastive training for ISL pose-text retrieval.
+
+Both encoders are fine-tuned jointly (CLIP / SignCLIP style):
+
+  pose keypoints --> Keypoint Conformer --\
+                                            >-- shared 384-d space -- InfoNCE
+  caption text   --> MiniLM (trainable) --/
+
+Extras:
+  * In-batch soft positives from on-the-fly text cosine similarity, so that
+    near-duplicate captions in a batch are not treated as hard negatives.
+  * Optional SignCL density loss on the pose encoder's per-frame memory.
+
+Validation reports full-set retrieval (R@1/5/10, median rank) and the best
+checkpoint is selected by mean R@10.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import random
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+
+if __package__ in (None, ""):
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+from src.models.retrieval import PoseTextRetrievalModel
+from src.retrieval.dataset import RetrievalDataset, collate_retrieval
+from src.retrieval.losses import retrieval_loss
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--val-manifest", type=Path, required=True)
+    parser.add_argument("--save-dir", type=Path, required=True)
+    parser.add_argument("--text-model", default="sentence-transformers/all-MiniLM-L6-v2")
+    parser.add_argument("--text-column", default="canonical_text")
+    parser.add_argument("--keypoint-column", default="keypoint_path")
+    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--max-frames", type=int, default=512)
+    parser.add_argument("--max-text-length", type=int, default=64)
+    parser.add_argument("--sample-mode", choices=("uniform", "random", "center"), default="random")
+    parser.add_argument("--augment", action="store_true")
+    parser.add_argument("--augment-prob", type=float, default=0.8)
+    parser.add_argument(
+        "--augment-methods",
+        nargs="+",
+        default=["noise", "subsample", "scale", "crop", "jitter"],
+    )
+    parser.add_argument("--lr", type=float, default=1e-4, help="pose encoder LR")
+    parser.add_argument("--text-lr", type=float, default=1e-5, help="text encoder LR (pretrained)")
+    parser.add_argument("--weight-decay", type=float, default=0.01)
+    parser.add_argument("--grad-clip", type=float, default=1.0)
+    parser.add_argument("--temperature", type=float, default=0.07)
+    parser.add_argument(
+        "--semantic-threshold",
+        type=float,
+        default=0.85,
+        help="in-batch text cosine above this becomes a soft positive; >=1 disables",
+    )
+    parser.add_argument("--density-weight", type=float, default=0.0)
+    parser.add_argument("--density-temperature", type=float, default=0.1)
+    parser.add_argument("--density-positive-window", type=int, default=1)
+    parser.add_argument("--density-negative-margin", type=int, default=8)
+    parser.add_argument("--embedding-dim", type=int, default=384)
+    parser.add_argument("--pose-model-dim", type=int, default=256)
+    parser.add_argument("--pose-layers", type=int, default=4)
+    parser.add_argument("--pose-heads", type=int, default=4)
+    parser.add_argument("--downsample-stride", type=int, default=4)
+    parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--limit", type=int)
+    parser.add_argument("--eval-chunk-size", type=int, default=1024)
+    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--amp", action="store_true")
+    parser.add_argument("--print-every", type=int, default=50)
+    parser.add_argument("--seed", type=int, default=42)
+    return parser.parse_args()
+
+
+def set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
+def build_loader(dataset: RetrievalDataset, args: argparse.Namespace, shuffle: bool, device) -> DataLoader:
+    return DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        num_workers=args.num_workers,
+        collate_fn=collate_retrieval,
+        pin_memory=device.type == "cuda",
+        drop_last=shuffle,
+    )
+
+
+def soft_positive_mask(text_embeddings: torch.Tensor, threshold: float) -> torch.Tensor | None:
+    """Off-diagonal in-batch positives where caption cosine exceeds threshold."""
+    if threshold >= 1.0:
+        return None
+    with torch.no_grad():
+        normed = F.normalize(text_embeddings.detach().float(), dim=-1, eps=1e-6)
+        sim = normed @ normed.T
+        mask = (sim >= threshold).float()
+        mask.fill_diagonal_(0.0)
+    return mask
+
+
+def tokenize_batch(model: PoseTextRetrievalModel, texts: list[str], device: torch.device) -> dict[str, torch.Tensor]:
+    tokens = model.text_encoder.tokenize(texts)
+    return {key: value.to(device, non_blocking=True) for key, value in tokens.items()}
+
+
+def train_one_epoch(
+    model: PoseTextRetrievalModel,
+    loader: DataLoader,
+    optimizer: torch.optim.Optimizer,
+    scaler: torch.cuda.amp.GradScaler,
+    device: torch.device,
+    args: argparse.Namespace,
+) -> dict[str, float]:
+    model.train()
+    totals = {"total": 0.0, "contrastive": 0.0, "density": 0.0}
+    rows = 0
+    start = time.time()
+    use_amp = args.amp and device.type == "cuda"
+
+    for step, batch in enumerate(loader, start=1):
+        keypoints = batch["keypoints"].to(device, non_blocking=True)
+        lengths = batch["lengths"].to(device, non_blocking=True)
+        tokens = tokenize_batch(model, batch["texts"], device)
+
+        optimizer.zero_grad(set_to_none=True)
+        with torch.cuda.amp.autocast(enabled=use_amp):
+            outputs = model(keypoints, lengths, tokens["input_ids"], tokens["attention_mask"])
+            mask = soft_positive_mask(outputs["text_embedding"], args.semantic_threshold)
+            loss, parts = retrieval_loss(
+                outputs["video_embedding"],
+                outputs["text_embedding"],
+                temperature=args.temperature,
+                positive_mask=mask,
+                memory=outputs["memory"],
+                valid_mask=outputs["valid_mask"],
+                density_weight=args.density_weight,
+                density_temperature=args.density_temperature,
+                positive_window=args.density_positive_window,
+                negative_margin=args.density_negative_margin,
+            )
+
+        scaler.scale(loss).backward()
+        if args.grad_clip > 0:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+        scaler.step(optimizer)
+        scaler.update()
+
+        batch_rows = int(keypoints.size(0))
+        rows += batch_rows
+        for key in totals:
+            totals[key] += parts.get(key, 0.0) * batch_rows
+
+        if args.print_every and step % args.print_every == 0:
+            print(
+                f"step={step} rows={rows} "
+                f"loss={totals['total'] / rows:.4f} "
+                f"con={totals['contrastive'] / rows:.4f} "
+                f"den={totals['density'] / rows:.4f}",
+                flush=True,
+            )
+
+    return {
+        "loss": totals["total"] / max(rows, 1),
+        "contrastive": totals["contrastive"] / max(rows, 1),
+        "density": totals["density"] / max(rows, 1),
+        "rows": float(rows),
+        "seconds": time.time() - start,
+    }
+
+
+@torch.no_grad()
+def encode_val(model: PoseTextRetrievalModel, loader: DataLoader, device: torch.device):
+    model.eval()
+    video_chunks: list[torch.Tensor] = []
+    text_chunks: list[torch.Tensor] = []
+    for batch in loader:
+        keypoints = batch["keypoints"].to(device, non_blocking=True)
+        lengths = batch["lengths"].to(device, non_blocking=True)
+        tokens = tokenize_batch(model, batch["texts"], device)
+        video, _, _ = model.encode_pose(keypoints, lengths)
+        text = model.encode_text(tokens["input_ids"], tokens["attention_mask"])
+        video_chunks.append(video.float().cpu())
+        text_chunks.append(text.float().cpu())
+    video = F.normalize(torch.cat(video_chunks, dim=0), dim=-1, eps=1e-6)
+    text = F.normalize(torch.cat(text_chunks, dim=0), dim=-1, eps=1e-6)
+    return video, text
+
+
+def rank_metrics(query: torch.Tensor, candidates: torch.Tensor, chunk_size: int) -> dict[str, float]:
+    n = query.size(0)
+    ranks: list[int] = []
+    for start in range(0, n, chunk_size):
+        end = min(start + chunk_size, n)
+        scores = query[start:end] @ candidates.T
+        target = scores[:, start:end].diag().unsqueeze(1)
+        rank = (scores > target).sum(dim=1) + 1
+        ranks.extend(rank.tolist())
+    ranks_t = torch.tensor(ranks, dtype=torch.float32)
+    return {
+        "r1": float((ranks_t <= 1).float().mean()),
+        "r5": float((ranks_t <= 5).float().mean()),
+        "r10": float((ranks_t <= 10).float().mean()),
+        "median_rank": float(ranks_t.median()),
+    }
+
+
+def evaluate(model: PoseTextRetrievalModel, loader: DataLoader, device: torch.device, chunk: int) -> dict[str, Any]:
+    video, text = encode_val(model, loader, device)
+    v2t = rank_metrics(video, text, chunk)
+    t2v = rank_metrics(text, video, chunk)
+    return {
+        "rows": int(video.size(0)),
+        **{f"v2t_{k}": v for k, v in v2t.items()},
+        **{f"t2v_{k}": v for k, v in t2v.items()},
+        "mean_r10": 0.5 * (v2t["r10"] + t2v["r10"]),
+    }
+
+
+def save_checkpoint(path: Path, model, optimizer, epoch: int, metrics: dict, args: argparse.Namespace) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "epoch": epoch,
+            "model_state": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "metrics": metrics,
+            "config": vars(args),
+        },
+        path,
+    )
+
+
+def main() -> None:
+    args = parse_args()
+    set_seed(args.seed)
+    device = torch.device(args.device if torch.cuda.is_available() or args.device == "cpu" else "cpu")
+
+    model = PoseTextRetrievalModel(
+        embedding_dim=args.embedding_dim,
+        pose_model_dim=args.pose_model_dim,
+        pose_layers=args.pose_layers,
+        pose_heads=args.pose_heads,
+        downsample_stride=args.downsample_stride,
+        dropout=args.dropout,
+        text_model_name=args.text_model,
+        max_text_length=args.max_text_length,
+    ).to(device)
+
+    train_dataset = RetrievalDataset(
+        manifest=args.manifest,
+        text_column=args.text_column,
+        keypoint_column=args.keypoint_column,
+        max_frames=args.max_frames,
+        sample_mode=args.sample_mode,
+        limit=args.limit,
+        augment=args.augment,
+        augment_probability=args.augment_prob,
+        augment_methods=args.augment_methods,
+    )
+    val_dataset = RetrievalDataset(
+        manifest=args.val_manifest,
+        text_column=args.text_column,
+        keypoint_column=args.keypoint_column,
+        max_frames=args.max_frames,
+        sample_mode="uniform",
+        limit=args.limit,
+    )
+    train_loader = build_loader(train_dataset, args, shuffle=True, device=device)
+    val_loader = build_loader(val_dataset, args, shuffle=False, device=device)
+
+    text_params = list(model.text_encoder.parameters())
+    text_ids = {id(p) for p in text_params}
+    other_params = [p for p in model.parameters() if id(p) not in text_ids]
+    optimizer = torch.optim.AdamW(
+        [
+            {"params": other_params, "lr": args.lr},
+            {"params": text_params, "lr": args.text_lr},
+        ],
+        weight_decay=args.weight_decay,
+    )
+    scaler = torch.cuda.amp.GradScaler(enabled=args.amp and device.type == "cuda")
+
+    args.save_dir.mkdir(parents=True, exist_ok=True)
+    (args.save_dir / "train_config.json").write_text(
+        json.dumps(vars(args), indent=2, default=str), encoding="utf-8"
+    )
+    print(f"train rows : {len(train_dataset)}")
+    print(f"val rows   : {len(val_dataset)}")
+    print(f"device     : {device}  amp={args.amp}")
+    print(f"pose LR={args.lr}  text LR={args.text_lr}  density_w={args.density_weight}")
+
+    best = -1.0
+    for epoch in range(1, args.epochs + 1):
+        print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
+        train_metrics = train_one_epoch(model, train_loader, optimizer, scaler, device, args)
+        val_metrics = evaluate(model, val_loader, device, args.eval_chunk_size)
+        metrics = {"train": train_metrics, "val": val_metrics}
+        print(
+            f"train loss={train_metrics['loss']:.4f} con={train_metrics['contrastive']:.4f} "
+            f"den={train_metrics['density']:.4f} | "
+            f"val v2t r1/5/10={val_metrics['v2t_r1']:.3f}/{val_metrics['v2t_r5']:.3f}/{val_metrics['v2t_r10']:.3f} "
+            f"t2v r10={val_metrics['t2v_r10']:.3f} med={val_metrics['v2t_median_rank']:.0f} "
+            f"mean_r10={val_metrics['mean_r10']:.3f}",
+            flush=True,
+        )
+        save_checkpoint(args.save_dir / "checkpoint_last.pt", model, optimizer, epoch, metrics, args)
+        if val_metrics["mean_r10"] > best:
+            best = val_metrics["mean_r10"]
+            save_checkpoint(args.save_dir / "checkpoint_best.pt", model, optimizer, epoch, metrics, args)
+            print(f"new best mean_r10: {best:.4f}", flush=True)
+
+
+if __name__ == "__main__":
+    main()
