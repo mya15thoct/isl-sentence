@@ -95,6 +95,12 @@ def parse_args() -> argparse.Namespace:
         help="Blend batch loss with full text-bank loss. 0 keeps in-batch training.",
     )
     parser.add_argument(
+        "--global-loss-warmup-epochs",
+        type=float,
+        default=0.0,
+        help="Linearly ramp global text-bank loss over this many epochs.",
+    )
+    parser.add_argument(
         "--global-semantic-weight",
         type=float,
         default=0.5,
@@ -245,11 +251,22 @@ def global_text_bank_loss(
     weight = min(max(float(semantic_weight), 0.0), 1.0)
     loss = (1.0 - weight) * exact_loss + weight * semantic_loss
     with torch.no_grad():
-        v2t_acc = (logits.argmax(dim=1) == labels).float().mean().item()
+        top_k = min(10, logits.size(1))
+        top_indices = torch.topk(logits, k=top_k, dim=1).indices
+        hits = top_indices == labels.unsqueeze(1)
+        v2t_acc = hits[:, :1].any(dim=1).float().mean().item()
+        r5 = hits[:, : min(5, top_k)].any(dim=1).float().mean().item()
+        r10 = hits[:, :top_k].any(dim=1).float().mean().item()
+        target_scores = logits.gather(1, labels.unsqueeze(1))
+        ranks = (logits > target_scores).sum(dim=1).float() + 1.0
+        mean_rank = ranks.mean().item()
     return loss, {
         "global_exact_loss": float(exact_loss.detach().cpu()),
         "global_semantic_loss": float(semantic_loss.detach().cpu()),
         "global_v2t_acc": v2t_acc,
+        "global_v2t_r5": r5,
+        "global_v2t_r10": r10,
+        "global_mean_rank": mean_rank,
         "global_positive_pairs_per_row": positive_pairs_per_row,
     }
 
@@ -296,6 +313,7 @@ def run_epoch(
     optimizer: torch.optim.Optimizer | None,
     scaler: torch.cuda.amp.GradScaler | None,
     context: AlignmentContext | None = None,
+    epoch: int = 1,
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
@@ -308,7 +326,11 @@ def run_epoch(
         "positive_pairs_per_row": 0.0,
         "global_loss": 0.0,
         "global_v2t_acc": 0.0,
+        "global_v2t_r5": 0.0,
+        "global_v2t_r10": 0.0,
+        "global_mean_rank": 0.0,
         "global_positive_pairs_per_row": 0.0,
+        "global_loss_weight": 0.0,
     }
     rows_seen = 0
     start = time.time()
@@ -331,6 +353,11 @@ def run_epoch(
                 semantic_positive_power=args.semantic_positive_power,
             )
             if context is not None and args.global_text_loss_weight > 0:
+                effective_global_weight = effective_global_loss_weight(
+                    args.global_text_loss_weight,
+                    args.global_loss_warmup_epochs,
+                    epoch,
+                )
                 global_loss, global_metrics = global_text_bank_loss(
                     video_embeddings=video_embeddings,
                     labels=batch["embedding_ids"],
@@ -338,14 +365,18 @@ def run_epoch(
                     temperature=args.temperature,
                     semantic_weight=args.global_semantic_weight,
                 )
-                weight = min(max(float(args.global_text_loss_weight), 0.0), 1.0)
-                loss = (1.0 - weight) * loss + weight * global_loss
+                loss = (1.0 - effective_global_weight) * loss + effective_global_weight * global_loss
                 metrics.update(global_metrics)
                 metrics["global_loss"] = float(global_loss.detach().cpu())
+                metrics["global_loss_weight"] = effective_global_weight
             else:
                 metrics["global_loss"] = 0.0
                 metrics["global_v2t_acc"] = 0.0
+                metrics["global_v2t_r5"] = 0.0
+                metrics["global_v2t_r10"] = 0.0
+                metrics["global_mean_rank"] = 0.0
                 metrics["global_positive_pairs_per_row"] = 0.0
+                metrics["global_loss_weight"] = 0.0
 
         if training:
             assert optimizer is not None
@@ -367,7 +398,11 @@ def run_epoch(
         totals["positive_pairs_per_row"] += metrics["positive_pairs_per_row"] * batch_size
         totals["global_loss"] += metrics["global_loss"] * batch_size
         totals["global_v2t_acc"] += metrics["global_v2t_acc"] * batch_size
+        totals["global_v2t_r5"] += metrics["global_v2t_r5"] * batch_size
+        totals["global_v2t_r10"] += metrics["global_v2t_r10"] * batch_size
+        totals["global_mean_rank"] += metrics["global_mean_rank"] * batch_size
         totals["global_positive_pairs_per_row"] += metrics["global_positive_pairs_per_row"] * batch_size
+        totals["global_loss_weight"] += metrics["global_loss_weight"] * batch_size
 
         if training and args.print_every and step % args.print_every == 0:
             print(
@@ -377,6 +412,9 @@ def run_epoch(
                 f"t2v={totals['t2v_acc'] / rows_seen:.3f} "
                 f"pos={totals['positive_pairs_per_row'] / rows_seen:.2f} "
                 f"gb_v2t={totals['global_v2t_acc'] / rows_seen:.3f} "
+                f"gb_r10={totals['global_v2t_r10'] / rows_seen:.3f} "
+                f"gb_rank={totals['global_mean_rank'] / rows_seen:.0f} "
+                f"gb_w={totals['global_loss_weight'] / rows_seen:.2f} "
                 f"gb_pos={totals['global_positive_pairs_per_row'] / rows_seen:.2f}",
                 flush=True,
             )
@@ -392,10 +430,26 @@ def run_epoch(
         "positive_pairs_per_row": totals["positive_pairs_per_row"] / max(rows_seen, 1),
         "global_loss": totals["global_loss"] / max(rows_seen, 1),
         "global_v2t_acc": totals["global_v2t_acc"] / max(rows_seen, 1),
+        "global_v2t_r5": totals["global_v2t_r5"] / max(rows_seen, 1),
+        "global_v2t_r10": totals["global_v2t_r10"] / max(rows_seen, 1),
+        "global_mean_rank": totals["global_mean_rank"] / max(rows_seen, 1),
         "global_positive_pairs_per_row": totals["global_positive_pairs_per_row"] / max(rows_seen, 1),
+        "global_loss_weight": totals["global_loss_weight"] / max(rows_seen, 1),
         "rows": float(rows_seen),
         "seconds": time.time() - start,
     }
+
+
+def effective_global_loss_weight(
+    target_weight: float,
+    warmup_epochs: float,
+    epoch: int,
+) -> float:
+    target = min(max(float(target_weight), 0.0), 1.0)
+    if warmup_epochs <= 0:
+        return target
+    progress = min(max(float(epoch) / warmup_epochs, 0.0), 1.0)
+    return target * progress
 
 
 def build_dataset(
@@ -556,7 +610,16 @@ def main() -> None:
     best_val = float("inf")
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
-        train_metrics = run_epoch(model, train_loader, device, args, optimizer, scaler, train_context)
+        train_metrics = run_epoch(
+            model,
+            train_loader,
+            device,
+            args,
+            optimizer,
+            scaler,
+            train_context,
+            epoch=epoch,
+        )
         metrics: dict[str, Any] = {"train": train_metrics}
         print(
             "train "
@@ -565,6 +628,9 @@ def main() -> None:
             f"t2v={train_metrics['t2v_acc']:.3f} "
             f"pos={train_metrics['positive_pairs_per_row']:.2f} "
             f"gb_v2t={train_metrics['global_v2t_acc']:.3f} "
+            f"gb_r10={train_metrics['global_v2t_r10']:.3f} "
+            f"gb_rank={train_metrics['global_mean_rank']:.0f} "
+            f"gb_w={train_metrics['global_loss_weight']:.2f} "
             f"gb_pos={train_metrics['global_positive_pairs_per_row']:.2f}",
             flush=True,
         )
@@ -572,7 +638,16 @@ def main() -> None:
         val_loss = train_metrics["loss"]
         if val_loader is not None:
             with torch.no_grad():
-                val_metrics = run_epoch(model, val_loader, device, args, None, None, val_context)
+                val_metrics = run_epoch(
+                    model,
+                    val_loader,
+                    device,
+                    args,
+                    None,
+                    None,
+                    val_context,
+                    epoch=epoch,
+                )
             metrics["val"] = val_metrics
             val_loss = val_metrics["loss"]
             print(
@@ -582,6 +657,9 @@ def main() -> None:
                 f"t2v={val_metrics['t2v_acc']:.3f} "
                 f"pos={val_metrics['positive_pairs_per_row']:.2f} "
                 f"gb_v2t={val_metrics['global_v2t_acc']:.3f} "
+                f"gb_r10={val_metrics['global_v2t_r10']:.3f} "
+                f"gb_rank={val_metrics['global_mean_rank']:.0f} "
+                f"gb_w={val_metrics['global_loss_weight']:.2f} "
                 f"gb_pos={val_metrics['global_positive_pairs_per_row']:.2f}",
                 flush=True,
             )
