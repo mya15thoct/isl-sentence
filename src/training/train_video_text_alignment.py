@@ -36,6 +36,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--val-text-embeddings", type=Path)
     parser.add_argument("--val-embedding-index", type=Path)
     parser.add_argument("--save-dir", type=Path, required=True)
+    parser.add_argument("--resume-from", type=Path)
+    parser.add_argument(
+        "--reset-optimizer",
+        action="store_true",
+        help="When resuming, load only model weights and start a fresh optimizer.",
+    )
     parser.add_argument("--text-column", default="canonical_text")
     parser.add_argument("--keypoint-column", default="keypoint_path")
     parser.add_argument("--epochs", type=int, default=20)
@@ -277,6 +283,12 @@ def model_state(model: nn.Module) -> dict[str, torch.Tensor]:
     return model.state_dict()
 
 
+def model_module(model: nn.Module) -> nn.Module:
+    if isinstance(model, nn.DataParallel):
+        return model.module
+    return model
+
+
 def save_checkpoint(
     path: Path,
     model: nn.Module,
@@ -296,6 +308,35 @@ def save_checkpoint(
         },
         path,
     )
+
+
+def load_training_checkpoint(
+    path: Path,
+    model: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    reset_optimizer: bool,
+    device: torch.device,
+) -> tuple[int, float]:
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+    model_module(model).load_state_dict(checkpoint["model_state"], strict=True)
+
+    if not reset_optimizer and "optimizer_state" in checkpoint:
+        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        move_optimizer_state(optimizer, device)
+
+    epoch = int(checkpoint.get("epoch", 0))
+    metrics = checkpoint.get("metrics") or {}
+    val_metrics = metrics.get("val") or {}
+    train_metrics = metrics.get("train") or {}
+    best_val = float(val_metrics.get("loss", train_metrics.get("loss", float("inf"))))
+    return epoch, best_val
+
+
+def move_optimizer_state(optimizer: torch.optim.Optimizer, device: torch.device) -> None:
+    for state in optimizer.state.values():
+        for key, value in state.items():
+            if torch.is_tensor(value):
+                state[key] = value.to(device)
 
 
 def move_batch(batch: dict[str, object], device: torch.device) -> dict[str, object]:
@@ -590,6 +631,22 @@ def main() -> None:
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp and device.type == "cuda")
+    start_epoch = 1
+    best_val = float("inf")
+    if args.resume_from is not None:
+        resumed_epoch, resumed_val = load_training_checkpoint(
+            args.resume_from,
+            model,
+            optimizer,
+            reset_optimizer=args.reset_optimizer,
+            device=device,
+        )
+        start_epoch = resumed_epoch + 1
+        best_val = resumed_val
+        print(f"resumed from: {args.resume_from}")
+        print(f"resume epoch: {resumed_epoch}")
+        print(f"resume val  : {best_val:.4f}")
+        print(f"optimizer   : {'reset' if args.reset_optimizer else 'loaded'}")
 
     args.save_dir.mkdir(parents=True, exist_ok=True)
     (args.save_dir / "train_config.json").write_text(
@@ -607,8 +664,14 @@ def main() -> None:
         print(f"text graph : {args.semantic_graph or 'exact-only'}")
     print(f"save dir   : {args.save_dir}")
 
-    best_val = float("inf")
-    for epoch in range(1, args.epochs + 1):
+    if start_epoch > args.epochs:
+        print(
+            f"nothing to train: resume epoch {start_epoch - 1} >= requested epochs {args.epochs}",
+            flush=True,
+        )
+        return
+
+    for epoch in range(start_epoch, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
         train_metrics = run_epoch(
             model,
