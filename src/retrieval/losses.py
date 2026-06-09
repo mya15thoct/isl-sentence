@@ -28,16 +28,20 @@ def info_nce(
     text_embeddings: torch.Tensor,
     temperature: float = 0.07,
     positive_mask: torch.Tensor | None = None,
+    logit_scale: torch.Tensor | float | None = None,
 ) -> torch.Tensor:
     """Bidirectional contrastive loss over a batch of paired embeddings.
 
     Args:
         video_embeddings: (B, D) tensor, expected L2-normalized.
         text_embeddings: (B, D) tensor, expected L2-normalized.
-        temperature: softmax temperature.
+        temperature: softmax temperature (used only when ``logit_scale`` is None).
         positive_mask: optional (B, B) boolean/float matrix marking soft
             positives. The diagonal (exact pair) is always a positive. When
             given, each row's target distribution is uniform over its positives.
+        logit_scale: optional multiplier on the cosine logits (CLIP-style
+            learnable temperature). When given it overrides ``temperature`` and
+            may be a tensor so gradients flow into a learnable parameter.
 
     Returns:
         Scalar loss = 0.5 * (video->text + text->video).
@@ -45,7 +49,8 @@ def info_nce(
     video_embeddings = F.normalize(video_embeddings.float(), dim=-1, eps=1e-6)
     text_embeddings = F.normalize(text_embeddings.float(), dim=-1, eps=1e-6)
 
-    logits = video_embeddings @ text_embeddings.T / max(temperature, 1e-6)
+    scale = logit_scale if logit_scale is not None else 1.0 / max(temperature, 1e-6)
+    logits = (video_embeddings @ text_embeddings.T) * scale
     batch_size = logits.size(0)
 
     if positive_mask is None:
@@ -140,6 +145,7 @@ def retrieval_loss(
     text_embeddings: torch.Tensor,
     *,
     temperature: float = 0.07,
+    logit_scale: torch.Tensor | float | None = None,
     positive_mask: torch.Tensor | None = None,
     memory: torch.Tensor | None = None,
     valid_mask: torch.Tensor | None = None,
@@ -157,6 +163,7 @@ def retrieval_loss(
         text_embeddings,
         temperature=temperature,
         positive_mask=positive_mask,
+        logit_scale=logit_scale,
     )
     parts = {"contrastive": float(contrastive.detach().cpu())}
     total = contrastive

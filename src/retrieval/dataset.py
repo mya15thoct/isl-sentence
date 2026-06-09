@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import random
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +16,19 @@ from src.keypoints.augmentation import augment_sequence
 
 
 KEYPOINT_DIM = 1662
+
+
+def normalize_for_grouping(text: str) -> str:
+    """Canonical key for caption-redundancy grouping.
+
+    Captions that normalize to the same key (e.g. the many identical
+    "let me tell you about it" rows in iSign) are treated as one group so that
+    they are not used as false negatives of each other.
+    """
+    text = text.lower().strip()
+    text = re.sub(r"[^a-z0-9' ]+", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 @dataclass(frozen=True)
@@ -152,6 +166,7 @@ class RetrievalSample:
     text: str
     keypoints: torch.Tensor
     source_row: int
+    group_id: int
 
 
 class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
@@ -188,6 +203,14 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
             next_row["_source_row"] = str(source_row)
             self.rows.append(next_row)
 
+        # Redundancy grouping: identical normalized captions share a group id.
+        group_map: dict[str, int] = {}
+        self.group_ids: list[int] = []
+        for row in self.rows:
+            key = normalize_for_grouping(row[text_column])
+            self.group_ids.append(group_map.setdefault(key, len(group_map)))
+        self.num_groups = len(group_map)
+
         self.text_column = text_column
         self.keypoint_column = keypoint_column
         self.max_frames = max_frames
@@ -220,6 +243,7 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
             text=row[self.text_column],
             keypoints=torch.from_numpy(keypoints.copy()),
             source_row=int(row["_source_row"]),
+            group_id=self.group_ids[index],
         )
 
 
@@ -230,6 +254,7 @@ def collate_retrieval(batch: list[RetrievalSample]) -> dict[str, object]:
         "uids": [item.uid for item in batch],
         "texts": [item.text for item in batch],
         "source_rows": torch.tensor([item.source_row for item in batch], dtype=torch.long),
+        "group_ids": torch.tensor([item.group_id for item in batch], dtype=torch.long),
         "keypoints": keypoints,
         "lengths": lengths,
     }

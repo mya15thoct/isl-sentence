@@ -9,6 +9,8 @@ SignCL density loss can operate on it.
 
 from __future__ import annotations
 
+import math
+
 import torch
 from torch import nn
 
@@ -44,6 +46,11 @@ class PoseTextRetrievalModel(nn.Module):
             max_length=max_text_length,
         )
         self.embedding_dim = embedding_dim
+        # CLIP-style learnable temperature (stored as log scale).
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(1.0 / 0.07)))
+
+    def current_logit_scale(self, max_scale: float = 100.0) -> torch.Tensor:
+        return self.logit_scale.exp().clamp(max=max_scale)
 
     @property
     def tokenizer(self):

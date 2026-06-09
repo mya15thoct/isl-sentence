@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
 import time
@@ -63,7 +64,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--text-lr", type=float, default=1e-5, help="text encoder LR (pretrained)")
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--grad-clip", type=float, default=1.0)
-    parser.add_argument("--temperature", type=float, default=0.07)
+    parser.add_argument("--warmup-epochs", type=float, default=1.0, help="linear warmup before cosine decay")
+    parser.add_argument("--temperature", type=float, default=0.07, help="initial temperature for the learnable logit scale")
     parser.add_argument(
         "--semantic-threshold",
         type=float,
@@ -120,6 +122,24 @@ def soft_positive_mask(text_embeddings: torch.Tensor, threshold: float) -> torch
     return mask
 
 
+def group_positive_mask(group_ids: torch.Tensor) -> torch.Tensor:
+    """Off-diagonal in-batch positives that share the same caption group (#1)."""
+    g = group_ids.view(-1, 1)
+    mask = (g == g.t()).float()
+    mask.fill_diagonal_(0.0)
+    return mask
+
+
+def combine_masks(*masks: torch.Tensor | None) -> torch.Tensor | None:
+    present = [m for m in masks if m is not None]
+    if not present:
+        return None
+    out = present[0]
+    for other in present[1:]:
+        out = torch.maximum(out, other)
+    return out
+
+
 def tokenize_batch(model: PoseTextRetrievalModel, texts: list[str], device: torch.device) -> dict[str, torch.Tensor]:
     tokens = model.text_encoder.tokenize(texts)
     return {key: value.to(device, non_blocking=True) for key, value in tokens.items()}
@@ -129,6 +149,7 @@ def train_one_epoch(
     model: PoseTextRetrievalModel,
     loader: DataLoader,
     optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LambdaLR,
     scaler: torch.cuda.amp.GradScaler,
     device: torch.device,
     args: argparse.Namespace,
@@ -142,16 +163,20 @@ def train_one_epoch(
     for step, batch in enumerate(loader, start=1):
         keypoints = batch["keypoints"].to(device, non_blocking=True)
         lengths = batch["lengths"].to(device, non_blocking=True)
+        group_ids = batch["group_ids"].to(device, non_blocking=True)
         tokens = tokenize_batch(model, batch["texts"], device)
 
         optimizer.zero_grad(set_to_none=True)
         with torch.cuda.amp.autocast(enabled=use_amp):
             outputs = model(keypoints, lengths, tokens["input_ids"], tokens["attention_mask"])
-            mask = soft_positive_mask(outputs["text_embedding"], args.semantic_threshold)
+            mask = combine_masks(
+                group_positive_mask(group_ids),
+                soft_positive_mask(outputs["text_embedding"], args.semantic_threshold),
+            )
             loss, parts = retrieval_loss(
                 outputs["video_embedding"],
                 outputs["text_embedding"],
-                temperature=args.temperature,
+                logit_scale=model.current_logit_scale(),
                 positive_mask=mask,
                 memory=outputs["memory"],
                 valid_mask=outputs["valid_mask"],
@@ -167,6 +192,7 @@ def train_one_epoch(
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         scaler.step(optimizer)
         scaler.update()
+        scheduler.step()
 
         batch_rows = int(keypoints.size(0))
         rows += batch_rows
@@ -196,6 +222,7 @@ def encode_val(model: PoseTextRetrievalModel, loader: DataLoader, device: torch.
     model.eval()
     video_chunks: list[torch.Tensor] = []
     text_chunks: list[torch.Tensor] = []
+    group_chunks: list[torch.Tensor] = []
     for batch in loader:
         keypoints = batch["keypoints"].to(device, non_blocking=True)
         lengths = batch["lengths"].to(device, non_blocking=True)
@@ -204,12 +231,15 @@ def encode_val(model: PoseTextRetrievalModel, loader: DataLoader, device: torch.
         text = model.encode_text(tokens["input_ids"], tokens["attention_mask"])
         video_chunks.append(video.float().cpu())
         text_chunks.append(text.float().cpu())
+        group_chunks.append(batch["group_ids"])
     video = F.normalize(torch.cat(video_chunks, dim=0), dim=-1, eps=1e-6)
     text = F.normalize(torch.cat(text_chunks, dim=0), dim=-1, eps=1e-6)
-    return video, text
+    groups = torch.cat(group_chunks, dim=0)
+    return video, text, groups
 
 
 def rank_metrics(query: torch.Tensor, candidates: torch.Tensor, chunk_size: int) -> dict[str, float]:
+    """Exact retrieval: only the paired (diagonal) caption counts as correct."""
     n = query.size(0)
     ranks: list[int] = []
     for start in range(0, n, chunk_size):
@@ -218,6 +248,31 @@ def rank_metrics(query: torch.Tensor, candidates: torch.Tensor, chunk_size: int)
         target = scores[:, start:end].diag().unsqueeze(1)
         rank = (scores > target).sum(dim=1) + 1
         ranks.extend(rank.tolist())
+    return _rank_summary(ranks)
+
+
+def redundancy_rank_metrics(
+    query: torch.Tensor,
+    candidates: torch.Tensor,
+    group_ids: torch.Tensor,
+    chunk_size: int,
+) -> dict[str, float]:
+    """Redundancy-aware retrieval (#1): any caption in the same group counts as
+    correct, so identical captions are not penalized as misses."""
+    n = query.size(0)
+    ranks: list[int] = []
+    for start in range(0, n, chunk_size):
+        end = min(start + chunk_size, n)
+        scores = query[start:end] @ candidates.T
+        relevant = group_ids[start:end].view(-1, 1) == group_ids.view(1, -1)
+        neg_inf = torch.finfo(scores.dtype).min
+        best_relevant = scores.masked_fill(~relevant, neg_inf).max(dim=1).values
+        rank = (scores > best_relevant.unsqueeze(1)).sum(dim=1) + 1
+        ranks.extend(rank.tolist())
+    return _rank_summary(ranks)
+
+
+def _rank_summary(ranks: list[int]) -> dict[str, float]:
     ranks_t = torch.tensor(ranks, dtype=torch.float32)
     return {
         "r1": float((ranks_t <= 1).float().mean()),
@@ -228,14 +283,20 @@ def rank_metrics(query: torch.Tensor, candidates: torch.Tensor, chunk_size: int)
 
 
 def evaluate(model: PoseTextRetrievalModel, loader: DataLoader, device: torch.device, chunk: int) -> dict[str, Any]:
-    video, text = encode_val(model, loader, device)
+    video, text, groups = encode_val(model, loader, device)
     v2t = rank_metrics(video, text, chunk)
     t2v = rank_metrics(text, video, chunk)
+    rv2t = redundancy_rank_metrics(video, text, groups, chunk)
+    rt2v = redundancy_rank_metrics(text, video, groups, chunk)
     return {
         "rows": int(video.size(0)),
+        "groups": int(groups.unique().numel()),
         **{f"v2t_{k}": v for k, v in v2t.items()},
         **{f"t2v_{k}": v for k, v in t2v.items()},
+        **{f"rv2t_{k}": v for k, v in rv2t.items()},
+        **{f"rt2v_{k}": v for k, v in rt2v.items()},
         "mean_r10": 0.5 * (v2t["r10"] + t2v["r10"]),
+        "rmean_r10": 0.5 * (rv2t["r10"] + rt2v["r10"]),
     }
 
 
@@ -301,6 +362,18 @@ def main() -> None:
         ],
         weight_decay=args.weight_decay,
     )
+
+    steps_per_epoch = max(1, len(train_loader))
+    total_steps = steps_per_epoch * args.epochs
+    warmup_steps = int(steps_per_epoch * args.warmup_epochs)
+
+    def lr_lambda(step: int) -> float:
+        if step < warmup_steps:
+            return (step + 1) / max(1, warmup_steps)
+        progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
+        return 0.5 * (1.0 + math.cos(math.pi * min(1.0, progress)))
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp and device.type == "cuda")
 
     args.save_dir.mkdir(parents=True, exist_ok=True)
@@ -315,15 +388,15 @@ def main() -> None:
     best = -1.0
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
-        train_metrics = train_one_epoch(model, train_loader, optimizer, scaler, device, args)
+        train_metrics = train_one_epoch(model, train_loader, optimizer, scheduler, scaler, device, args)
         val_metrics = evaluate(model, val_loader, device, args.eval_chunk_size)
         metrics = {"train": train_metrics, "val": val_metrics}
         print(
             f"train loss={train_metrics['loss']:.4f} con={train_metrics['contrastive']:.4f} "
-            f"den={train_metrics['density']:.4f} | "
+            f"den={train_metrics['density']:.4f} lr={scheduler.get_last_lr()[0]:.2e} | "
             f"val v2t r1/5/10={val_metrics['v2t_r1']:.3f}/{val_metrics['v2t_r5']:.3f}/{val_metrics['v2t_r10']:.3f} "
             f"t2v r10={val_metrics['t2v_r10']:.3f} med={val_metrics['v2t_median_rank']:.0f} "
-            f"mean_r10={val_metrics['mean_r10']:.3f}",
+            f"mean_r10={val_metrics['mean_r10']:.3f} rmean_r10={val_metrics['rmean_r10']:.3f}",
             flush=True,
         )
         save_checkpoint(args.save_dir / "checkpoint_last.pt", model, optimizer, epoch, metrics, args)
