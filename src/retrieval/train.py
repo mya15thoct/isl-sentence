@@ -334,7 +334,7 @@ def main() -> None:
     ).to(device)
 
     if args.init_checkpoint is not None:
-        state = torch.load(args.init_checkpoint, map_location=device)
+        state = torch.load(args.init_checkpoint, map_location=device, weights_only=False)
         model_state = state.get("model_state", state) if isinstance(state, dict) else state
         result = model.load_state_dict(model_state, strict=False)
         print(
