@@ -83,6 +83,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--downsample-stride", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hand-aware", action="store_true", help="hand-centric encoder: hands main path + residual cross-attention from pose/face")
+    parser.add_argument("--init-checkpoint", type=Path, default=None, help="warm-start from a Stage-A (word) checkpoint, loaded strict=False")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--eval-chunk-size", type=int, default=1024)
     parser.add_argument("--device", default="cuda")
@@ -331,6 +332,16 @@ def main() -> None:
         text_model_name=args.text_model,
         max_text_length=args.max_text_length,
     ).to(device)
+
+    if args.init_checkpoint is not None:
+        state = torch.load(args.init_checkpoint, map_location=device)
+        model_state = state.get("model_state", state) if isinstance(state, dict) else state
+        result = model.load_state_dict(model_state, strict=False)
+        print(
+            f"warm-start from {args.init_checkpoint}: "
+            f"missing={len(result.missing_keys)} unexpected={len(result.unexpected_keys)}",
+            flush=True,
+        )
 
     train_dataset = RetrievalDataset(
         manifest=args.manifest,
