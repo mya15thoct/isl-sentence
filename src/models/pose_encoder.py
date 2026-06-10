@@ -96,6 +96,70 @@ class BodyPartFrameEncoder(nn.Module):
         return self.fusion(features)
 
 
+class HandAwareFrameEncoder(nn.Module):
+    """Hand-centric per-frame encoder.
+
+    The two hands form the main path that always flows through. Pose and face
+    only *add* context via residual cross-attention (query = hands), so the
+    hand signal can never be down-weighted away - it is the backbone, the rest
+    are modulators.
+    """
+
+    HAND_DIM = HANDS_DIM // 2  # 63 per hand
+
+    def __init__(self, model_dim: int = 256, num_heads: int = 4, dropout: float = 0.1):
+        super().__init__()
+        self.left_branch = MLPBranch(self.HAND_DIM, 128, model_dim, dropout)
+        self.right_branch = MLPBranch(self.HAND_DIM, 128, model_dim, dropout)
+        self.pose_branch = MLPBranch(POSE_DIM, 128, model_dim, dropout)
+        self.face_branch = MLPBranch(FACE_DIM, 256, model_dim, dropout)
+
+        self.hand_fuse = nn.Sequential(
+            nn.Linear(2 * model_dim, model_dim),
+            nn.ReLU(),
+            nn.LayerNorm(model_dim),
+        )
+        self.cross_attn = nn.MultiheadAttention(
+            embed_dim=model_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
+        )
+        self.attn_norm = nn.LayerNorm(model_dim)
+        self.out = nn.Sequential(
+            nn.Linear(model_dim, model_dim),
+            nn.GELU(),
+            nn.LayerNorm(model_dim),
+            nn.Dropout(dropout),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.size(-1) != KEYPOINT_DIM:
+            raise ValueError(f"Expected last dim {KEYPOINT_DIM}, got {x.size(-1)}")
+
+        pose = x[..., :POSE_DIM]
+        face = x[..., POSE_DIM : POSE_DIM + FACE_DIM]
+        hands_start = POSE_DIM + FACE_DIM
+        left = x[..., hands_start : hands_start + self.HAND_DIM]
+        right = x[..., hands_start + self.HAND_DIM :]
+
+        left_feat = self.left_branch(left)
+        right_feat = self.right_branch(right)
+        pose_feat = self.pose_branch(pose)
+        face_feat = self.face_branch(face)
+
+        # Main path: both hands fused.
+        hands = self.hand_fuse(torch.cat([left_feat, right_feat], dim=-1))  # (B, T, D)
+        batch, length, dim = hands.shape
+
+        # Context (pose + face) added via residual cross-attention queried by hands.
+        query = hands.reshape(batch * length, 1, dim)
+        context = torch.stack([pose_feat, face_feat], dim=2).reshape(batch * length, 2, dim)
+        attended, _ = self.cross_attn(query, context, context, need_weights=False)
+        fused = self.attn_norm(hands + attended.reshape(batch, length, dim))
+        return self.out(fused)
+
+
 class TemporalDownsample(nn.Module):
     def __init__(self, model_dim: int = 256, stride: int = 4, kernel_size: int = 7):
         super().__init__()
@@ -245,10 +309,16 @@ class KeypointConformerEncoder(nn.Module):
         conv_kernel: int = 31,
         dropout: float = 0.1,
         normalize_output: bool = True,
+        hand_aware: bool = False,
     ):
         super().__init__()
         self.normalize_output = normalize_output
-        self.frame_encoder = BodyPartFrameEncoder(model_dim=model_dim, dropout=dropout)
+        if hand_aware:
+            self.frame_encoder = HandAwareFrameEncoder(
+                model_dim=model_dim, num_heads=num_heads, dropout=dropout
+            )
+        else:
+            self.frame_encoder = BodyPartFrameEncoder(model_dim=model_dim, dropout=dropout)
         self.downsample = TemporalDownsample(model_dim=model_dim, stride=downsample_stride)
         self.layers = nn.ModuleList(
             [

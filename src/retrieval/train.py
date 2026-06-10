@@ -82,6 +82,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pose-heads", type=int, default=4)
     parser.add_argument("--downsample-stride", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--hand-aware", action="store_true", help="hand-centric encoder: hands main path + residual cross-attention from pose/face")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--eval-chunk-size", type=int, default=1024)
     parser.add_argument("--device", default="cuda")
@@ -326,6 +327,7 @@ def main() -> None:
         pose_heads=args.pose_heads,
         downsample_stride=args.downsample_stride,
         dropout=args.dropout,
+        hand_aware=args.hand_aware,
         text_model_name=args.text_model,
         max_text_length=args.max_text_length,
     ).to(device)

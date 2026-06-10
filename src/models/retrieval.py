@@ -27,6 +27,7 @@ class PoseTextRetrievalModel(nn.Module):
         pose_heads: int = 4,
         downsample_stride: int = 4,
         dropout: float = 0.1,
+        hand_aware: bool = False,
         text_model_name: str = DEFAULT_TEXT_MODEL,
         max_text_length: int = 64,
     ) -> None:
@@ -39,6 +40,7 @@ class PoseTextRetrievalModel(nn.Module):
             downsample_stride=downsample_stride,
             dropout=dropout,
             normalize_output=False,
+            hand_aware=hand_aware,
         )
         self.text_encoder = TextEncoder(
             model_name=text_model_name,
