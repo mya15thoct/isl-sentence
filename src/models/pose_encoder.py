@@ -119,12 +119,13 @@ class HandAwareFrameEncoder(nn.Module):
             nn.ReLU(),
             nn.LayerNorm(model_dim),
         )
-        self.cross_attn = nn.MultiheadAttention(
-            embed_dim=model_dim,
-            num_heads=num_heads,
-            dropout=dropout,
-            batch_first=True,
-        )
+        # Lightweight cross-attention (hands query 2 context tokens) done with
+        # plain matmul to avoid the huge B*T batch that breaks the SDPA kernel.
+        self.q_proj = nn.Linear(model_dim, model_dim)
+        self.k_proj = nn.Linear(model_dim, model_dim)
+        self.v_proj = nn.Linear(model_dim, model_dim)
+        self.attn_scale = model_dim ** -0.5
+        self.attn_dropout = nn.Dropout(dropout)
         self.attn_norm = nn.LayerNorm(model_dim)
         self.out = nn.Sequential(
             nn.Linear(model_dim, model_dim),
@@ -150,13 +151,18 @@ class HandAwareFrameEncoder(nn.Module):
 
         # Main path: both hands fused.
         hands = self.hand_fuse(torch.cat([left_feat, right_feat], dim=-1))  # (B, T, D)
-        batch, length, dim = hands.shape
 
-        # Context (pose + face) added via residual cross-attention queried by hands.
-        query = hands.reshape(batch * length, 1, dim)
-        context = torch.stack([pose_feat, face_feat], dim=2).reshape(batch * length, 2, dim)
-        attended, _ = self.cross_attn(query, context, context, need_weights=False)
-        fused = self.attn_norm(hands + attended.reshape(batch, length, dim))
+        # Context (pose + face) added via residual cross-attention queried by
+        # hands. Manual single-head attention over the 2 context tokens keeps
+        # everything in (B, T, ...) shape - no B*T flattening.
+        context = torch.stack([pose_feat, face_feat], dim=2)  # (B, T, 2, D)
+        q = self.q_proj(hands)                                # (B, T, D)
+        k = self.k_proj(context)                              # (B, T, 2, D)
+        v = self.v_proj(context)                              # (B, T, 2, D)
+        scores = torch.einsum("btd,btnd->btn", q, k) * self.attn_scale  # (B, T, 2)
+        weights = self.attn_dropout(torch.softmax(scores, dim=-1))      # (B, T, 2)
+        attended = torch.einsum("btn,btnd->btd", weights, v)           # (B, T, D)
+        fused = self.attn_norm(hands + attended)
         return self.out(fused)
 
 
