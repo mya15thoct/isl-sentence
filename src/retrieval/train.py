@@ -83,6 +83,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--downsample-stride", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hand-aware", action="store_true", help="hand-centric encoder: hands main path + residual cross-attention from pose/face")
+    parser.add_argument("--context-parts", nargs="*", choices=["pose", "face"], default=["pose", "face"], help="hand-aware ablation: which parts feed the cross-attention context (empty = hands only)")
     parser.add_argument("--no-redundancy", action="store_true", help="ablation: disable redundancy grouping (identical captions become hard negatives)")
     parser.add_argument("--init-checkpoint", type=Path, default=None, help="warm-start from a Stage-A (word) checkpoint, loaded strict=False")
     parser.add_argument("--limit", type=int)
@@ -331,6 +332,7 @@ def main() -> None:
         downsample_stride=args.downsample_stride,
         dropout=args.dropout,
         hand_aware=args.hand_aware,
+        context_parts=tuple(args.context_parts),
         text_model_name=args.text_model,
         max_text_length=args.max_text_length,
     ).to(device)

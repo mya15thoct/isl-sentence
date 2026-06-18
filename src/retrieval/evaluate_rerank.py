@@ -72,6 +72,7 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
         downsample_stride=int(cfg.get("downsample_stride", 4)),
         dropout=float(cfg.get("dropout", 0.1)),
         hand_aware=bool(cfg.get("hand_aware", False)),
+        context_parts=tuple(cfg.get("context_parts", ("pose", "face"))),
         text_model_name=str(cfg.get("text_model", DEFAULT_TEXT_MODEL)),
         max_text_length=int(cfg.get("max_text_length", 64)),
     )

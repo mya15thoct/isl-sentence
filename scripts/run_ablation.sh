@@ -48,6 +48,16 @@ run no_redundancy --text-model "$BGE"    --embedding-dim 1024 --hand-aware --no-
 # − bge  (weaker text encoder: MiniLM instead of bge-large)
 run minilm_text   --text-model "$MINILM" --embedding-dim 384  --hand-aware
 
+# ---- INPUT-STREAM ablation (proves the hand-aware design) ----
+# All use hand-aware + bge; vary which parts feed the cross-attention context.
+# hands only  (no context)
+run ctx_hands_only --text-model "$BGE" --embedding-dim 1024 --hand-aware --context-parts
+# hands + pose
+run ctx_hands_pose --text-model "$BGE" --embedding-dim 1024 --hand-aware --context-parts pose
+# hands + face
+run ctx_hands_face --text-model "$BGE" --embedding-dim 1024 --hand-aware --context-parts face
+# hands + pose + face = the `reference` row above (full context)
+
 echo "ALL ABLATION RUNS COMPLETE."
 echo "Next — score every row with the SAME evaluator:"
 echo "  for d in reference no_handaware no_redundancy minilm_text; do"

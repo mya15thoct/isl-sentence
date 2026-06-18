@@ -107,8 +107,15 @@ class HandAwareFrameEncoder(nn.Module):
 
     HAND_DIM = HANDS_DIM // 2  # 63 per hand
 
-    def __init__(self, model_dim: int = 256, num_heads: int = 4, dropout: float = 0.1):
+    def __init__(
+        self,
+        model_dim: int = 256,
+        num_heads: int = 4,
+        dropout: float = 0.1,
+        context_parts: tuple[str, ...] = ("pose", "face"),
+    ):
         super().__init__()
+        self.context_parts = tuple(context_parts)
         self.left_branch = MLPBranch(self.HAND_DIM, 128, model_dim, dropout)
         self.right_branch = MLPBranch(self.HAND_DIM, 128, model_dim, dropout)
         self.pose_branch = MLPBranch(POSE_DIM, 128, model_dim, dropout)
@@ -146,21 +153,30 @@ class HandAwareFrameEncoder(nn.Module):
 
         left_feat = self.left_branch(left)
         right_feat = self.right_branch(right)
-        pose_feat = self.pose_branch(pose)
-        face_feat = self.face_branch(face)
 
         # Main path: both hands fused.
         hands = self.hand_fuse(torch.cat([left_feat, right_feat], dim=-1))  # (B, T, D)
 
-        # Context (pose + face) added via residual cross-attention queried by
-        # hands. Manual single-head attention over the 2 context tokens keeps
-        # everything in (B, T, ...) shape - no B*T flattening.
-        context = torch.stack([pose_feat, face_feat], dim=2)  # (B, T, 2, D)
-        q = self.q_proj(hands)                                # (B, T, D)
-        k = self.k_proj(context)                              # (B, T, 2, D)
-        v = self.v_proj(context)                              # (B, T, 2, D)
-        scores = torch.einsum("btd,btnd->btn", q, k) * self.attn_scale  # (B, T, 2)
-        weights = self.attn_dropout(torch.softmax(scores, dim=-1))      # (B, T, 2)
+        # Context tokens (pose / face) selected for the ablation. Hands always
+        # flow; context only *adds* via residual cross-attention queried by hands.
+        part_feats: list[torch.Tensor] = []
+        if "pose" in self.context_parts:
+            part_feats.append(self.pose_branch(pose))
+        if "face" in self.context_parts:
+            part_feats.append(self.face_branch(face))
+
+        if not part_feats:
+            # Hands-only: no context to attend to.
+            return self.out(self.attn_norm(hands))
+
+        # Manual single-head attention over N context tokens keeps everything in
+        # (B, T, ...) shape - no B*T flattening (avoids the SDPA kernel limit).
+        context = torch.stack(part_feats, dim=2)  # (B, T, N, D)
+        q = self.q_proj(hands)                    # (B, T, D)
+        k = self.k_proj(context)                  # (B, T, N, D)
+        v = self.v_proj(context)                  # (B, T, N, D)
+        scores = torch.einsum("btd,btnd->btn", q, k) * self.attn_scale  # (B, T, N)
+        weights = self.attn_dropout(torch.softmax(scores, dim=-1))      # (B, T, N)
         attended = torch.einsum("btn,btnd->btd", weights, v)           # (B, T, D)
         fused = self.attn_norm(hands + attended)
         return self.out(fused)
@@ -316,12 +332,14 @@ class KeypointConformerEncoder(nn.Module):
         dropout: float = 0.1,
         normalize_output: bool = True,
         hand_aware: bool = False,
+        context_parts: tuple[str, ...] = ("pose", "face"),
     ):
         super().__init__()
         self.normalize_output = normalize_output
         if hand_aware:
             self.frame_encoder = HandAwareFrameEncoder(
-                model_dim=model_dim, num_heads=num_heads, dropout=dropout
+                model_dim=model_dim, num_heads=num_heads, dropout=dropout,
+                context_parts=context_parts,
             )
         else:
             self.frame_encoder = BodyPartFrameEncoder(model_dim=model_dim, dropout=dropout)
