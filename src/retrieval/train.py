@@ -83,6 +83,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--downsample-stride", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hand-aware", action="store_true", help="hand-centric encoder: hands main path + residual cross-attention from pose/face")
+    parser.add_argument("--no-redundancy", action="store_true", help="ablation: disable redundancy grouping (identical captions become hard negatives)")
     parser.add_argument("--init-checkpoint", type=Path, default=None, help="warm-start from a Stage-A (word) checkpoint, loaded strict=False")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--eval-chunk-size", type=int, default=1024)
@@ -171,8 +172,9 @@ def train_one_epoch(
         optimizer.zero_grad(set_to_none=True)
         with torch.cuda.amp.autocast(enabled=use_amp):
             outputs = model(keypoints, lengths, tokens["input_ids"], tokens["attention_mask"])
+            group_mask = None if args.no_redundancy else group_positive_mask(group_ids)
             mask = combine_masks(
-                group_positive_mask(group_ids),
+                group_mask,
                 soft_positive_mask(outputs["text_embedding"], args.semantic_threshold),
             )
             loss, parts = retrieval_loss(
