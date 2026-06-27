@@ -24,12 +24,18 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-SUFFIX = re.compile(r"(_w|_d|_e\d+|-\d+)$")
+# Segment suffix: -<n> (hex ids) or --<n> (YouTube ids, which may contain '-'),
+# plus the _w / _d / _e<n> markers for word / description / example rows.
+SUFFIX = re.compile(r"(_w|_d|_e\d+|-{1,2}\d+)$")
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def video_id_from_uid(uid: str) -> str:
+    return SUFFIX.sub("", uid.strip())
 
 
 def video_id(row: dict[str, str]) -> str:
@@ -38,7 +44,7 @@ def video_id(row: dict[str, str]) -> str:
     if not uid:
         kp = (row.get("keypoint_path") or "").strip()
         uid = Path(kp).stem if kp else ""
-    return SUFFIX.sub("", uid)
+    return video_id_from_uid(uid)
 
 
 def main() -> None:
@@ -60,9 +66,9 @@ def main() -> None:
 
     tr, va, te = split_vids["train"], split_vids["val"], split_vids["test"]
     print()
-    print(f"train ∩ val  : {len(tr & va):>5d} video_ids in both")
-    print(f"train ∩ test : {len(tr & te):>5d} video_ids in both")
-    print(f"val   ∩ test : {len(va & te):>5d} video_ids in both")
+    print(f"train & val  : {len(tr & va):>5d} video_ids in both")
+    print(f"train & test : {len(tr & te):>5d} video_ids in both")
+    print(f"val   & test : {len(va & te):>5d} video_ids in both")
 
     leaked = {v for v, s in owners.items() if len(s) > 1}
     print()
