@@ -11,8 +11,9 @@ set -euo pipefail
 
 # ---- paths (edit if needed) ----
 ROOT=/mnt/ngan/ISL-Sequences
-TRAIN=$ROOT/manifests/isign_signpose2text_clean_20260603_1540_train.csv
-VAL=$ROOT/manifests/isign_signpose2text_clean_20260603_1540_val.csv
+# video_id-grouped 80/10/10 split (leakage-free, iSign protocol)
+TRAIN=$ROOT/manifests/isign_retrieval_videosplit_train.csv
+VAL=$ROOT/manifests/isign_retrieval_videosplit_val.csv
 CKPT=$ROOT/checkpoints
 LOG=$ROOT/logs
 BGE="BAAI/bge-large-en-v1.5"
