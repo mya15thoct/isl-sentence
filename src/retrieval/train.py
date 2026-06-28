@@ -403,17 +403,21 @@ def evaluate(model: PoseTextRetrievalModel, loader: DataLoader, device: torch.de
 
 
 def save_checkpoint(path: Path, model, optimizer, epoch: int, metrics: dict, args: argparse.Namespace) -> None:
+    # Optimizer state is intentionally NOT saved: this project never resumes
+    # training, only loads model_state for eval/ensemble, so storing it just
+    # tripled checkpoint size (~3.2GB -> ~1.4GB) and filled the disk.
     path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
     torch.save(
         {
             "epoch": epoch,
             "model_state": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
             "metrics": metrics,
             "config": vars(args),
         },
-        path,
+        tmp,
     )
+    tmp.replace(path)  # atomic: a failed write can't corrupt the previous checkpoint
 
 
 def main() -> None:
