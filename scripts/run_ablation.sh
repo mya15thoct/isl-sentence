@@ -21,16 +21,19 @@ MINILM="sentence-transformers/all-MiniLM-L6-v2"
 mkdir -p "$LOG"
 
 # ---- shared protocol (identical for every row) ----
+# batch 128 (GPU is often partly occupied) + EMA, matching the abl_ema50 headline
+# recipe so each row differs from the reference by exactly ONE component.
 COMMON="--manifest $TRAIN --val-manifest $VAL --text-column canonical_text \
-  --epochs 35 --batch-size 256 --num-workers 4 --max-frames 512 \
+  --epochs 35 --batch-size 128 --num-workers 4 --max-frames 512 \
   --sample-mode random --augment --augment-prob 0.8 \
   --lr 2e-4 --text-lr 1e-5 --warmup-epochs 2 --density-weight 0 \
-  --seed 42 --device cuda --amp --print-every 50"
+  --ema-decay 0.999 --seed 42 --device cuda --amp --print-every 50"
 
 run () {  # run <name> <extra-flags...>
   local name=$1; shift
   echo "=== RUN: $name ==="
-  python -u src/retrieval/train.py $COMMON \
+  PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    python -u src/retrieval/train.py $COMMON \
     --save-dir "$CKPT/abl_$name" "$@" \
     > "$LOG/abl_$name.log" 2>&1
   echo "=== DONE: $name (best in $CKPT/abl_$name) ==="
