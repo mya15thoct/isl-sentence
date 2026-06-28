@@ -55,6 +55,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--pool-seeds", type=int, default=3, help="random sub-pools per size")
     parser.add_argument("--dsl-temp", type=float, default=100.0, help="sharpness of the DSL prior")
+    parser.add_argument("--sinkhorn-temp", type=float, default=20.0, help="logit scale before Sinkhorn normalization")
+    parser.add_argument("--sinkhorn-iters", type=int, default=4, help="Sinkhorn row/col normalization iterations")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--out", type=Path, help="optional JSON dump of all metrics")
@@ -115,6 +117,20 @@ def dsl_rerank(sim: torch.Tensor, temp: float) -> torch.Tensor:
     return sim * prior
 
 
+def sinkhorn_rerank(sim: torch.Tensor, temp: float, iters: int) -> torch.Tensor:
+    """Sinkhorn (doubly-stochastic) normalization of the similarity matrix.
+
+    Alternately normalizes rows and columns in log-space so that no candidate can
+    be a "hub" that scores high against many queries. A stronger, complementary
+    hubness fix to Dual-Softmax; returns log-domain scores usable for ranking.
+    """
+    logits = sim * temp
+    for _ in range(max(1, iters)):
+        logits = logits - torch.logsumexp(logits, dim=1, keepdim=True)
+        logits = logits - torch.logsumexp(logits, dim=0, keepdim=True)
+    return logits
+
+
 def rank_summary(ranks: torch.Tensor) -> dict[str, float]:
     ranks = ranks.float()
     return {
@@ -143,16 +159,24 @@ def evaluate_pool(
     group_ids: torch.Tensor,
     indices: torch.Tensor | None,
     dsl_temp: float,
+    sinkhorn_temp: float,
+    sinkhorn_iters: int,
 ) -> dict[str, dict]:
     if indices is not None:
         sim = sim[indices][:, indices]
         group_ids = group_ids[indices]
+    # Each method maps to its (video->text, text->video) score matrices. The
+    # re-rankers are applied independently per direction (matching DSL's design).
+    methods = {
+        "cosine": (sim, sim.T),
+        "dsl": (dsl_rerank(sim, dsl_temp), dsl_rerank(sim.T, dsl_temp)),
+        "sinkhorn": (
+            sinkhorn_rerank(sim, sinkhorn_temp, sinkhorn_iters),
+            sinkhorn_rerank(sim.T, sinkhorn_temp, sinkhorn_iters),
+        ),
+    }
     results: dict[str, dict] = {}
-    for method, v2t_scores in (
-        ("cosine", sim),
-        ("dsl", dsl_rerank(sim, dsl_temp)),
-    ):
-        t2v_scores = dsl_rerank(sim.T, dsl_temp) if method == "dsl" else sim.T
+    for method, (v2t_scores, t2v_scores) in methods.items():
         results[method] = {
             "v2t": metrics_for_scores(v2t_scores, group_ids),
             "t2v": metrics_for_scores(t2v_scores, group_ids),
@@ -220,13 +244,17 @@ def main() -> None:
     for pool_size in args.pool_sizes:
         if pool_size <= 0 or pool_size >= n:
             key = f"pool=full({n})"
-            all_results[key] = evaluate_pool(sim, group_ids, None, args.dsl_temp)
+            all_results[key] = evaluate_pool(
+                sim, group_ids, None, args.dsl_temp, args.sinkhorn_temp, args.sinkhorn_iters
+            )
         else:
             runs = []
             for seed in range(args.pool_seeds):
                 generator = torch.Generator().manual_seed(seed)
                 indices = torch.randperm(n, generator=generator)[:pool_size]
-                runs.append(evaluate_pool(sim, group_ids, indices, args.dsl_temp))
+                runs.append(evaluate_pool(
+                    sim, group_ids, indices, args.dsl_temp, args.sinkhorn_temp, args.sinkhorn_iters
+                ))
             key = f"pool={pool_size}(avg {args.pool_seeds} seeds)"
             all_results[key] = average_dicts(runs)
 

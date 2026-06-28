@@ -36,7 +36,7 @@ if __package__ in (None, ""):
 
 from src.models.retrieval import PoseTextRetrievalModel
 from src.retrieval.dataset import RetrievalDataset, collate_retrieval
-from src.retrieval.losses import retrieval_loss
+from src.retrieval.losses import density_loss, info_nce_xbm, retrieval_loss
 
 
 def parse_args() -> argparse.Namespace:
@@ -85,6 +85,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hand-aware", action="store_true", help="hand-centric encoder: hands main path + residual cross-attention from pose/face")
     parser.add_argument("--context-parts", nargs="*", choices=["pose", "face"], default=["pose", "face"], help="hand-aware ablation: which parts feed the cross-attention context (empty = hands only)")
     parser.add_argument("--no-redundancy", action="store_true", help="ablation: disable redundancy grouping (identical captions become hard negatives)")
+    parser.add_argument("--queue-size", type=int, default=0, help="cross-batch memory bank size (extra contrastive negatives); 0 = off")
+    parser.add_argument("--ema-decay", type=float, default=0.0, help="EMA decay on weights; 0 = off. ~0.999 averages the last few epochs into checkpoint_ema.pt")
     parser.add_argument("--init-checkpoint", type=Path, default=None, help="warm-start from a Stage-A (word) checkpoint, loaded strict=False")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--eval-chunk-size", type=int, default=1024)
@@ -93,6 +95,63 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--print-every", type=int, default=50)
     parser.add_argument("--seed", type=int, default=42)
     return parser.parse_args()
+
+
+class EMA:
+    """Exponential moving average of model weights (kept in fp32).
+
+    Cheap, per-step weight averaging. Because the best epoch tends to sit at the
+    very end of the cosine schedule, averaging the final epochs into one set of
+    weights gives a smoother, usually slightly better model for free.
+    """
+
+    def __init__(self, model: torch.nn.Module, decay: float) -> None:
+        self.decay = decay
+        self.shadow = {
+            name: param.detach().clone().float()
+            for name, param in model.state_dict().items()
+            if param.is_floating_point()
+        }
+
+    @torch.no_grad()
+    def update(self, model: torch.nn.Module) -> None:
+        for name, param in model.state_dict().items():
+            if name in self.shadow:
+                self.shadow[name].mul_(self.decay).add_(param.detach().float(), alpha=1.0 - self.decay)
+
+    @torch.no_grad()
+    def copy_to(self, model: torch.nn.Module) -> None:
+        state = model.state_dict()
+        for name, value in self.shadow.items():
+            state[name].copy_(value.to(state[name].dtype))
+
+
+class CrossBatchQueue:
+    """FIFO memory bank of detached video/text embeddings for extra negatives."""
+
+    def __init__(self, size: int, dim: int, device: torch.device) -> None:
+        self.size = size
+        self.video = torch.zeros(size, dim, device=device)
+        self.text = torch.zeros(size, dim, device=device)
+        self.groups = torch.full((size,), -1, dtype=torch.long, device=device)
+        self.filled = 0
+        self.ptr = 0
+
+    @torch.no_grad()
+    def get(self) -> tuple[torch.Tensor | None, torch.Tensor | None, torch.Tensor | None]:
+        if self.filled == 0:
+            return None, None, None
+        return self.video[: self.filled], self.text[: self.filled], self.groups[: self.filled]
+
+    @torch.no_grad()
+    def enqueue(self, video: torch.Tensor, text: torch.Tensor, groups: torch.Tensor) -> None:
+        n = video.size(0)
+        idx = (torch.arange(n, device=self.video.device) + self.ptr) % self.size
+        self.video[idx] = video.detach().float()
+        self.text[idx] = text.detach().float()
+        self.groups[idx] = groups.to(self.groups.device)
+        self.ptr = int((self.ptr + n) % self.size)
+        self.filled = min(self.size, self.filled + n)
 
 
 def set_seed(seed: int) -> None:
@@ -157,6 +216,8 @@ def train_one_epoch(
     scaler: torch.cuda.amp.GradScaler,
     device: torch.device,
     args: argparse.Namespace,
+    ema: "EMA | None" = None,
+    queue: "CrossBatchQueue | None" = None,
 ) -> dict[str, float]:
     model.train()
     totals = {"total": 0.0, "contrastive": 0.0, "density": 0.0}
@@ -178,18 +239,44 @@ def train_one_epoch(
                 group_mask,
                 soft_positive_mask(outputs["text_embedding"], args.semantic_threshold),
             )
-            loss, parts = retrieval_loss(
-                outputs["video_embedding"],
-                outputs["text_embedding"],
-                logit_scale=model.current_logit_scale(),
-                positive_mask=mask,
-                memory=outputs["memory"],
-                valid_mask=outputs["valid_mask"],
-                density_weight=args.density_weight,
-                density_temperature=args.density_temperature,
-                positive_window=args.density_positive_window,
-                negative_margin=args.density_negative_margin,
-            )
+            if queue is not None:
+                qv, qt, qg = queue.get()
+                contrastive = info_nce_xbm(
+                    outputs["video_embedding"],
+                    outputs["text_embedding"],
+                    group_ids,
+                    queue_video=qv,
+                    queue_text=qt,
+                    queue_groups=qg,
+                    in_batch_positive=mask,
+                    logit_scale=model.current_logit_scale(),
+                )
+                loss = contrastive
+                parts = {"contrastive": float(contrastive.detach().cpu()), "density": 0.0}
+                if args.density_weight > 0.0:
+                    den = density_loss(
+                        outputs["memory"],
+                        outputs["valid_mask"],
+                        temperature=args.density_temperature,
+                        positive_window=args.density_positive_window,
+                        negative_margin=args.density_negative_margin,
+                    )
+                    loss = loss + args.density_weight * den
+                    parts["density"] = float(den.detach().cpu())
+                parts["total"] = float(loss.detach().cpu())
+            else:
+                loss, parts = retrieval_loss(
+                    outputs["video_embedding"],
+                    outputs["text_embedding"],
+                    logit_scale=model.current_logit_scale(),
+                    positive_mask=mask,
+                    memory=outputs["memory"],
+                    valid_mask=outputs["valid_mask"],
+                    density_weight=args.density_weight,
+                    density_temperature=args.density_temperature,
+                    positive_window=args.density_positive_window,
+                    negative_margin=args.density_negative_margin,
+                )
 
         scaler.scale(loss).backward()
         if args.grad_clip > 0:
@@ -198,6 +285,14 @@ def train_one_epoch(
         scaler.step(optimizer)
         scaler.update()
         scheduler.step()
+
+        if ema is not None:
+            ema.update(model)
+        if queue is not None:
+            with torch.no_grad():
+                qv_new = F.normalize(outputs["video_embedding"].detach().float(), dim=-1, eps=1e-6)
+                qt_new = F.normalize(outputs["text_embedding"].detach().float(), dim=-1, eps=1e-6)
+            queue.enqueue(qv_new, qt_new, group_ids)
 
         batch_rows = int(keypoints.size(0))
         rows += batch_rows
@@ -393,6 +488,13 @@ def main() -> None:
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp and device.type == "cuda")
 
+    ema = EMA(model, args.ema_decay) if args.ema_decay > 0.0 else None
+    queue = (
+        CrossBatchQueue(args.queue_size, args.embedding_dim, device)
+        if args.queue_size > 0
+        else None
+    )
+
     args.save_dir.mkdir(parents=True, exist_ok=True)
     (args.save_dir / "train_config.json").write_text(
         json.dumps(vars(args), indent=2, default=str), encoding="utf-8"
@@ -401,11 +503,14 @@ def main() -> None:
     print(f"val rows   : {len(val_dataset)}")
     print(f"device     : {device}  amp={args.amp}")
     print(f"pose LR={args.lr}  text LR={args.text_lr}  density_w={args.density_weight}")
+    print(f"queue_size={args.queue_size}  ema_decay={args.ema_decay}")
 
     best = -1.0
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
-        train_metrics = train_one_epoch(model, train_loader, optimizer, scheduler, scaler, device, args)
+        train_metrics = train_one_epoch(
+            model, train_loader, optimizer, scheduler, scaler, device, args, ema=ema, queue=queue
+        )
         val_metrics = evaluate(model, val_loader, device, args.eval_chunk_size)
         metrics = {"train": train_metrics, "val": val_metrics}
         print(
@@ -421,6 +526,20 @@ def main() -> None:
             best = val_metrics["mean_r10"]
             save_checkpoint(args.save_dir / "checkpoint_best.pt", model, optimizer, epoch, metrics, args)
             print(f"new best mean_r10: {best:.4f}", flush=True)
+
+    if ema is not None:
+        ema.copy_to(model)
+        ema_metrics = evaluate(model, val_loader, device, args.eval_chunk_size)
+        print(
+            f"EMA val v2t r1/5/10={ema_metrics['v2t_r1']:.3f}/{ema_metrics['v2t_r5']:.3f}/{ema_metrics['v2t_r10']:.3f} "
+            f"mean_r10={ema_metrics['mean_r10']:.3f} rmean_r10={ema_metrics['rmean_r10']:.3f}",
+            flush=True,
+        )
+        save_checkpoint(
+            args.save_dir / "checkpoint_ema.pt", model, optimizer, args.epochs,
+            {"val": ema_metrics}, args,
+        )
+        print("saved EMA weights to checkpoint_ema.pt", flush=True)
 
 
 if __name__ == "__main__":
