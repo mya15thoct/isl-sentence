@@ -86,6 +86,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--context-parts", nargs="*", choices=["pose", "face"], default=["pose", "face"], help="hand-aware ablation: which parts feed the cross-attention context (empty = hands only)")
     parser.add_argument("--no-redundancy", action="store_true", help="ablation: disable redundancy grouping (identical captions become hard negatives)")
     parser.add_argument("--queue-size", type=int, default=0, help="cross-batch memory bank size (extra contrastive negatives); 0 = off")
+    parser.add_argument("--queue-warmup-epochs", type=int, default=2, help="train in-batch only for this many epochs before activating the memory bank (avoids stale-negative collapse); queue is still filled during warm-up")
     parser.add_argument("--ema-decay", type=float, default=0.0, help="EMA decay on weights; 0 = off. ~0.999 averages the last few epochs into checkpoint_ema.pt")
     parser.add_argument("--init-checkpoint", type=Path, default=None, help="warm-start from a Stage-A (word) checkpoint, loaded strict=False")
     parser.add_argument("--limit", type=int)
@@ -218,6 +219,7 @@ def train_one_epoch(
     args: argparse.Namespace,
     ema: "EMA | None" = None,
     queue: "CrossBatchQueue | None" = None,
+    queue_active: bool = True,
 ) -> dict[str, float]:
     model.train()
     totals = {"total": 0.0, "contrastive": 0.0, "density": 0.0}
@@ -239,7 +241,7 @@ def train_one_epoch(
                 group_mask,
                 soft_positive_mask(outputs["text_embedding"], args.semantic_threshold),
             )
-            if queue is not None:
+            if queue is not None and queue_active:
                 qv, qt, qg = queue.get()
                 contrastive = info_nce_xbm(
                     outputs["video_embedding"],
@@ -508,8 +510,12 @@ def main() -> None:
     best = -1.0
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
+        queue_active = queue is not None and epoch > args.queue_warmup_epochs
+        if queue is not None:
+            print(f"  memory bank: {'ON' if queue_active else f'warm-up (in-batch only, until epoch {args.queue_warmup_epochs})'}", flush=True)
         train_metrics = train_one_epoch(
-            model, train_loader, optimizer, scheduler, scaler, device, args, ema=ema, queue=queue
+            model, train_loader, optimizer, scheduler, scaler, device, args,
+            ema=ema, queue=queue, queue_active=queue_active,
         )
         val_metrics = evaluate(model, val_loader, device, args.eval_chunk_size)
         metrics = {"train": train_metrics, "val": val_metrics}
