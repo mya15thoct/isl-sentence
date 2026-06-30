@@ -9,8 +9,8 @@
 #   see scripts note at the bottom (evaluate_rerank over all checkpoint_best.pt).
 set -euo pipefail
 
-# ---- paths (edit if needed) ----
-ROOT=/mnt/ngan/ISL-Sequences
+# ---- paths (override with `ROOT=... bash scripts/run_ablation.sh` if remounted) ----
+ROOT=${ROOT:-/mnt/recover/ngan/ISL-Sequences}
 # video_id-grouped 80/10/10 split (leakage-free, iSign protocol)
 TRAIN=$ROOT/manifests/isign_retrieval_videosplit_train.csv
 VAL=$ROOT/manifests/isign_retrieval_videosplit_val.csv
@@ -32,6 +32,11 @@ COMMON="--manifest $TRAIN --val-manifest $VAL --text-column canonical_text \
 
 run () {  # run <name> <extra-flags...>
   local name=$1; shift
+  # Resume-friendly: skip a row that already produced its EMA checkpoint.
+  if [ -f "$CKPT/abl_$name/checkpoint_ema.pt" ]; then
+    echo "=== SKIP: $name (checkpoint_ema.pt already exists) ==="
+    return 0
+  fi
   echo "=== RUN: $name ==="
   # Tolerate a single row failing (e.g. transient OOM) so the rest still run.
   if PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
