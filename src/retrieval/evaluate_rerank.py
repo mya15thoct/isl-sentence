@@ -75,11 +75,17 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
         dropout=float(cfg.get("dropout", 0.1)),
         hand_aware=bool(cfg.get("hand_aware", False)),
         context_parts=tuple(cfg.get("context_parts", ("pose", "face"))),
+        motion=bool(cfg.get("motion_features", False)),
         text_model_name=str(cfg.get("text_model", DEFAULT_TEXT_MODEL)),
         max_text_length=int(cfg.get("max_text_length", 64)),
     )
     model.load_state_dict(state["model_state"])
     return model.to(device).eval()
+
+
+def checkpoint_uses_motion(path: Path) -> bool:
+    state = torch.load(path, map_location="cpu", weights_only=False)
+    return bool(state.get("config", {}).get("motion_features", False))
 
 
 @torch.no_grad()
@@ -206,6 +212,10 @@ def main() -> None:
     args = parse_args()
     device = torch.device(args.device if torch.cuda.is_available() or args.device == "cpu" else "cpu")
 
+    # Match the input representation the checkpoints were trained with.
+    motion = checkpoint_uses_motion(args.checkpoints[0])
+    if motion:
+        print("checkpoints use motion features (position + velocity + acceleration)")
     dataset = RetrievalDataset(
         manifest=args.manifest,
         text_column=args.text_column,
@@ -213,6 +223,7 @@ def main() -> None:
         max_frames=args.max_frames,
         sample_mode="uniform",
         limit=args.limit,
+        motion_features=motion,
     )
     loader = DataLoader(
         dataset,

@@ -36,6 +36,21 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
+def add_motion_features(keypoints: np.ndarray) -> np.ndarray:
+    """Append per-frame velocity (Δ) and acceleration (ΔΔ) to raw positions.
+
+    Returns ``(T, 3*KEYPOINT_DIM)`` = ``[position ; velocity ; acceleration]``.
+    Velocity is the signed first difference (direction of motion, the meaningful
+    part), acceleration the second difference (start/stop, direction change).
+    Frame 0 velocity/acceleration are zero (no prior frame).
+    """
+    velocity = np.zeros_like(keypoints)
+    velocity[1:] = keypoints[1:] - keypoints[:-1]
+    acceleration = np.zeros_like(velocity)
+    acceleration[1:] = velocity[1:] - velocity[:-1]
+    return np.concatenate([keypoints, velocity, acceleration], axis=1).astype(np.float32)
+
+
 def sample_keypoints(keypoints: np.ndarray, max_frames: int, sample_mode: str) -> np.ndarray:
     if max_frames <= 0 or keypoints.shape[0] <= max_frames:
         return keypoints
@@ -78,6 +93,7 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         augment: bool = False,
         augment_probability: float = 0.75,
         augment_methods: list[str] | None = None,
+        motion_features: bool = False,
     ) -> None:
         rows = read_csv(manifest)
         if limit is not None:
@@ -108,6 +124,7 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         self.augment = augment
         self.augment_probability = augment_probability
         self.augment_methods = augment_methods or []
+        self.motion_features = motion_features
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -127,6 +144,8 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
                 probability=self.augment_probability,
             )
         keypoints = sample_keypoints(keypoints, self.max_frames, self.sample_mode)
+        if self.motion_features:
+            keypoints = add_motion_features(keypoints)
 
         return RetrievalSample(
             uid=row.get("uid", ""),

@@ -84,6 +84,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hand-aware", action="store_true", help="hand-centric encoder: hands main path + residual cross-attention from pose/face")
     parser.add_argument("--context-parts", nargs="*", choices=["pose", "face"], default=["pose", "face"], help="hand-aware ablation: which parts feed the cross-attention context (empty = hands only)")
+    parser.add_argument("--motion-features", action="store_true", help="append per-frame velocity (Δ) and acceleration (ΔΔ) to positions (input becomes 3×1662); hand-aware only")
     parser.add_argument("--no-redundancy", action="store_true", help="ablation: disable redundancy grouping (identical captions become hard negatives)")
     parser.add_argument("--queue-size", type=int, default=0, help="cross-batch memory bank size (extra contrastive negatives); 0 = off")
     parser.add_argument("--queue-warmup-epochs", type=int, default=2, help="train in-batch only for this many epochs before activating the memory bank (avoids stale-negative collapse); queue is still filled during warm-up")
@@ -434,6 +435,7 @@ def main() -> None:
         dropout=args.dropout,
         hand_aware=args.hand_aware,
         context_parts=tuple(args.context_parts),
+        motion=args.motion_features,
         text_model_name=args.text_model,
         max_text_length=args.max_text_length,
     ).to(device)
@@ -458,6 +460,7 @@ def main() -> None:
         augment=args.augment,
         augment_probability=args.augment_prob,
         augment_methods=args.augment_methods,
+        motion_features=args.motion_features,
     )
     val_dataset = RetrievalDataset(
         manifest=args.val_manifest,
@@ -466,6 +469,7 @@ def main() -> None:
         max_frames=args.max_frames,
         sample_mode="uniform",
         limit=args.limit,
+        motion_features=args.motion_features,
     )
     train_loader = build_loader(train_dataset, args, shuffle=True, device=device)
     val_loader = build_loader(val_dataset, args, shuffle=False, device=device)

@@ -113,13 +113,16 @@ class HandAwareFrameEncoder(nn.Module):
         num_heads: int = 4,
         dropout: float = 0.1,
         context_parts: tuple[str, ...] = ("pose", "face"),
+        motion: bool = False,
     ):
         super().__init__()
         self.context_parts = tuple(context_parts)
-        self.left_branch = MLPBranch(self.HAND_DIM, 128, model_dim, dropout)
-        self.right_branch = MLPBranch(self.HAND_DIM, 128, model_dim, dropout)
-        self.pose_branch = MLPBranch(POSE_DIM, 128, model_dim, dropout)
-        self.face_branch = MLPBranch(FACE_DIM, 256, model_dim, dropout)
+        self.motion = motion
+        m = 3 if motion else 1  # position (+ velocity + acceleration) per keypoint
+        self.left_branch = MLPBranch(self.HAND_DIM * m, 128, model_dim, dropout)
+        self.right_branch = MLPBranch(self.HAND_DIM * m, 128, model_dim, dropout)
+        self.pose_branch = MLPBranch(POSE_DIM * m, 128, model_dim, dropout)
+        self.face_branch = MLPBranch(FACE_DIM * m, 256, model_dim, dropout)
 
         self.hand_fuse = nn.Sequential(
             nn.Linear(2 * model_dim, model_dim),
@@ -142,14 +145,34 @@ class HandAwareFrameEncoder(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if x.size(-1) != KEYPOINT_DIM:
-            raise ValueError(f"Expected last dim {KEYPOINT_DIM}, got {x.size(-1)}")
+        expected = KEYPOINT_DIM * (3 if self.motion else 1)
+        if x.size(-1) != expected:
+            raise ValueError(f"Expected last dim {expected}, got {x.size(-1)}")
 
-        pose = x[..., :POSE_DIM]
-        face = x[..., POSE_DIM : POSE_DIM + FACE_DIM]
-        hands_start = POSE_DIM + FACE_DIM
-        left = x[..., hands_start : hands_start + self.HAND_DIM]
-        right = x[..., hands_start + self.HAND_DIM :]
+        if self.motion:
+            # Input layout is [position(1662) | velocity(1662) | acceleration(1662)];
+            # gather each body part's pos/vel/accel slices side by side.
+            base = KEYPOINT_DIM
+
+            def part(start: int, dim: int) -> torch.Tensor:
+                return torch.cat(
+                    [x[..., start : start + dim],
+                     x[..., base + start : base + start + dim],
+                     x[..., 2 * base + start : 2 * base + start + dim]],
+                    dim=-1,
+                )
+
+            pose = part(0, POSE_DIM)
+            face = part(POSE_DIM, FACE_DIM)
+            hands_start = POSE_DIM + FACE_DIM
+            left = part(hands_start, self.HAND_DIM)
+            right = part(hands_start + self.HAND_DIM, self.HAND_DIM)
+        else:
+            pose = x[..., :POSE_DIM]
+            face = x[..., POSE_DIM : POSE_DIM + FACE_DIM]
+            hands_start = POSE_DIM + FACE_DIM
+            left = x[..., hands_start : hands_start + self.HAND_DIM]
+            right = x[..., hands_start + self.HAND_DIM :]
 
         left_feat = self.left_branch(left)
         right_feat = self.right_branch(right)
@@ -333,15 +356,18 @@ class KeypointConformerEncoder(nn.Module):
         normalize_output: bool = True,
         hand_aware: bool = False,
         context_parts: tuple[str, ...] = ("pose", "face"),
+        motion: bool = False,
     ):
         super().__init__()
         self.normalize_output = normalize_output
         if hand_aware:
             self.frame_encoder = HandAwareFrameEncoder(
                 model_dim=model_dim, num_heads=num_heads, dropout=dropout,
-                context_parts=context_parts,
+                context_parts=context_parts, motion=motion,
             )
         else:
+            if motion:
+                raise ValueError("motion features are only implemented for the hand-aware encoder")
             self.frame_encoder = BodyPartFrameEncoder(model_dim=model_dim, dropout=dropout)
         self.downsample = TemporalDownsample(model_dim=model_dim, stride=downsample_stride)
         self.layers = nn.ModuleList(
