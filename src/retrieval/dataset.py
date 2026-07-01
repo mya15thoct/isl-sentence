@@ -36,18 +36,29 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
-def add_motion_features(keypoints: np.ndarray) -> np.ndarray:
+def add_motion_features(keypoints: np.ndarray, normalize: bool = True) -> np.ndarray:
     """Append per-frame velocity (Δ) and acceleration (ΔΔ) to raw positions.
 
     Returns ``(T, 3*KEYPOINT_DIM)`` = ``[position ; velocity ; acceleration]``.
     Velocity is the signed first difference (direction of motion, the meaningful
     part), acceleration the second difference (start/stop, direction change).
     Frame 0 velocity/acceleration are zero (no prior frame).
+
+    When ``normalize`` (default), velocity and acceleration are each divided by
+    their own per-sequence standard deviation. This (a) removes the absolute
+    signing-speed scale, which is signer/frame-rate dependent, while keeping the
+    sign/direction and the relative motion pattern, and (b) brings the motion
+    streams to ~unit scale so they are comparable to the (shoulder-normalized)
+    positions and are not drowned out inside the shared part-MLP. A single scalar
+    std per stream is used so that "which keypoint moves more" is preserved.
     """
     velocity = np.zeros_like(keypoints)
     velocity[1:] = keypoints[1:] - keypoints[:-1]
     acceleration = np.zeros_like(velocity)
     acceleration[1:] = velocity[1:] - velocity[:-1]
+    if normalize:
+        velocity = velocity / (float(velocity.std()) + 1e-6)
+        acceleration = acceleration / (float(acceleration.std()) + 1e-6)
     return np.concatenate([keypoints, velocity, acceleration], axis=1).astype(np.float32)
 
 
