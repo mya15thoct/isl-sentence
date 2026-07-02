@@ -83,9 +83,10 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
     return model.to(device).eval()
 
 
-def checkpoint_uses_motion(path: Path) -> bool:
-    state = torch.load(path, map_location="cpu", weights_only=False)
-    return bool(state.get("config", {}).get("motion_features", False))
+def checkpoint_input_flags(path: Path) -> tuple[bool, bool]:
+    """(motion_features, face_keep) the checkpoint was trained with."""
+    cfg = torch.load(path, map_location="cpu", weights_only=False).get("config", {})
+    return bool(cfg.get("motion_features", False)), bool(cfg.get("face_keep", False))
 
 
 @torch.no_grad()
@@ -213,9 +214,11 @@ def main() -> None:
     device = torch.device(args.device if torch.cuda.is_available() or args.device == "cpu" else "cpu")
 
     # Match the input representation the checkpoints were trained with.
-    motion = checkpoint_uses_motion(args.checkpoints[0])
+    motion, face_keep = checkpoint_input_flags(args.checkpoints[0])
     if motion:
         print("checkpoints use motion features (position + velocity + acceleration)")
+    if face_keep:
+        print("checkpoints use face-keep (lips/eyebrows/eyes only)")
     dataset = RetrievalDataset(
         manifest=args.manifest,
         text_column=args.text_column,
@@ -224,6 +227,7 @@ def main() -> None:
         sample_mode="uniform",
         limit=args.limit,
         motion_features=motion,
+        face_keep=face_keep,
     )
     loader = DataLoader(
         dataset,

@@ -36,6 +36,36 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
+# MediaPipe FaceMesh landmark indices that carry sign-relevant non-manual markers
+# (lips, eyebrows, eyes). All other face landmarks (contour, cheeks, forehead,
+# nose bridge) are treated as noise and zeroed when ``face_keep`` is on.
+FACE_KEEP_LANDMARKS = frozenset({
+    # lips (outer + inner)
+    0, 13, 14, 17, 37, 39, 40, 61, 78, 80, 81, 82, 84, 87, 88, 91, 95, 146, 178,
+    181, 185, 191, 267, 269, 270, 291, 308, 310, 311, 312, 314, 317, 318, 321,
+    324, 375, 402, 405, 409, 415,
+    # eyebrows (left + right)
+    46, 52, 53, 55, 63, 65, 66, 70, 105, 107,
+    276, 282, 283, 285, 293, 295, 296, 300, 334, 336,
+    # eyes (left + right)
+    7, 33, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246,
+    249, 263, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387, 388, 398, 466,
+})
+
+
+def _build_face_keep_mask() -> np.ndarray:
+    """1/0 mask over the 1662-d frame that zeroes non-kept face landmarks."""
+    mask = np.ones(KEYPOINT_DIM, dtype=np.float32)
+    face_start = 132  # POSE_DIM; face block = [132 : 132+1404], 468 landmarks × 3
+    for landmark in range(468):
+        if landmark not in FACE_KEEP_LANDMARKS:
+            mask[face_start + landmark * 3 : face_start + landmark * 3 + 3] = 0.0
+    return mask
+
+
+FACE_KEEP_MASK = _build_face_keep_mask()
+
+
 def add_motion_features(keypoints: np.ndarray, normalize: bool = True) -> np.ndarray:
     """Append per-frame velocity (Δ) and acceleration (ΔΔ) to raw positions.
 
@@ -105,6 +135,7 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         augment_probability: float = 0.75,
         augment_methods: list[str] | None = None,
         motion_features: bool = False,
+        face_keep: bool = False,
     ) -> None:
         rows = read_csv(manifest)
         if limit is not None:
@@ -136,6 +167,7 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         self.augment_probability = augment_probability
         self.augment_methods = augment_methods or []
         self.motion_features = motion_features
+        self.face_keep = face_keep
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -155,6 +187,8 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
                 probability=self.augment_probability,
             )
         keypoints = sample_keypoints(keypoints, self.max_frames, self.sample_mode)
+        if self.face_keep:
+            keypoints = keypoints * FACE_KEEP_MASK  # zero non-mouth/eyebrow/eye face points
         if self.motion_features:
             keypoints = add_motion_features(keypoints)
 
