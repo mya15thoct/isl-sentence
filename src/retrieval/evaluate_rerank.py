@@ -145,6 +145,7 @@ def rank_summary(ranks: torch.Tensor) -> dict[str, float]:
         "r5": float((ranks <= 5).float().mean()),
         "r10": float((ranks <= 10).float().mean()),
         "median_rank": float(ranks.median()),
+        "mean_rank": float(ranks.mean()),
     }
 
 
@@ -204,8 +205,8 @@ def format_block(name: str, block: dict) -> str:
     rv2t = block["v2t"]["redundancy"]
     return (
         f"  {name:<8} v2t r1/r5/r10={v2t['r1']:.3f}/{v2t['r5']:.3f}/{v2t['r10']:.3f} "
-        f"med={v2t['median_rank']:.0f} | t2v r10={t2v['r10']:.3f} | "
-        f"rv2t r10={rv2t['r10']:.3f}"
+        f"med={v2t['median_rank']:.0f} mnr={v2t['mean_rank']:.1f} | "
+        f"t2v r10={t2v['r10']:.3f} mnr={t2v['mean_rank']:.1f} | rv2t r10={rv2t['r10']:.3f}"
     )
 
 

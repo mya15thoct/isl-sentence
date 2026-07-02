@@ -100,14 +100,14 @@ def fmt_seed(block: dict, scheme: str) -> str:
     def ms(d, m):
         return f"{d[m]['mean']:.3f}±{d[m]['std']:.3f}"
     return (f"v2t R@1 {ms(e,'r1')} R@5 {ms(e,'r5')} R@10 {ms(e,'r10')} "
-            f"med {e['median_rank']['mean']:.1f} | t2v R@10 {ms(t,'r10')}")
+            f"med {e['median_rank']['mean']:.1f} mnr {e['mean_rank']['mean']:.1f} | t2v R@10 {ms(t,'r10')}")
 
 
 def fmt_ens(block: dict, scheme: str) -> str:
     e = block[scheme]["v2t"]["exact"]
     t = block[scheme]["t2v"]["exact"]
     return (f"v2t R@1 {e['r1']:.3f} R@5 {e['r5']:.3f} R@10 {e['r10']:.3f} "
-            f"med {e['median_rank']:.0f} | t2v R@10 {t['r10']:.3f}")
+            f"med {e['median_rank']:.0f} mnr {e['mean_rank']:.1f} | t2v R@10 {t['r10']:.3f}")
 
 
 def main() -> None:
