@@ -34,12 +34,14 @@ run () {
   fi
 }
 
-# HARP (hand-aware) and the uniform-fusion baseline — the transfer claim needs both.
+# Three of our rows, mirroring the iSign ladder: frozen-text -> uniform-fusion
+# (SignCLIP-style) -> HARP. The transfer claim needs the ladder, not one number.
 run harp         --text-model "$BGE" --embedding-dim 1024 --hand-aware
 run no_handaware --text-model "$BGE" --embedding-dim 1024
+run frozen_text  --text-model "$BGE" --embedding-dim 1024 --hand-aware --text-lr 0
 
 echo "=== EVAL (full official test pool) ==="
-for d in harp no_handaware; do
+for d in harp no_handaware frozen_text; do
   python -m src.retrieval.evaluate_rerank \
     --manifest "$TEST" \
     --checkpoints "$CKPT/h2s_$d/checkpoint_ema.pt" \

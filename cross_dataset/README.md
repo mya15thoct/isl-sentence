@@ -28,15 +28,32 @@ What we download (fits the ~76 GB free disk):
   clips with the SAME code used for iSign (`src/keypoints/holistic.py`), keeping
   the input protocol identical across datasets.
 
-## Published numbers to compare against (test set = full 2,356 pool)
+## Published numbers to compare against (How2Sign test, full pool)
 
-From the SEDS paper's comparison table (verify against the PDFs when writing):
+From SEDS Table 1 (arXiv:2407.16394) + UPRet/C²RL abstracts. Note: SEDS/CiCo use
+**2,348** test pairs after filtering (official split lists 2,356) — state our
+exact pool size and follow the same full-pool protocol.
 
-| Method | Modality | T2V R@1/R@5/R@10 | V2T R@1/R@5/R@10 |
-|---|---|---|---|
-| CiCo (CVPR'23) | RGB (I3D) | 56.6 / 69.9 / 74.7 | 51.6 / 64.8 / 70.1 |
-| SEDS (MM'24) | RGB + pose | 62.5 / 75.1 / 80.1 | 57.9 / 70.4 / 74.9 |
-| **HARP (ours)** | **pose only** | ? | ? |
+| Method | Venue | Modality | T2V R@1/R@5/R@10 | V2T R@1/R@5/R@10 |
+|---|---|---|---|---|
+| SA-SR (SPOT-ALIGN) | CVPR'22 | RGB | 18.9 / 32.1 / 36.5 | 11.6 / 27.4 / 32.5 |
+| SA-CM | CVPR'22 | RGB | 24.3 / 40.7 / 46.5 | 17.9 / 40.1 / 46.9 |
+| SA-COMB | CVPR'22 | RGB | 34.2 / 48.0 / 52.6 | 23.6 / 47.0 / 53.0 |
+| CiCo | CVPR'23 | RGB (I3D) | 56.6 / 69.9 / 74.7 | 51.6 / 64.8 / 70.1 |
+| UPRet | ECCV'24 | RGB | 59.1 / ⚠verify / ⚠ | ⚠verify |
+| C²RL | arXiv'24 | RGB | ~62 ⚠verify | ⚠verify |
+| SEDS | MM'24 | RGB + pose | 62.5 / 75.1 / 80.1 | 57.9 / 70.4 / 74.9 |
+| frozen-text (ours) | — | pose only | ? | ? |
+| uniform-fusion / SignCLIP-style (ours) | — | pose only | ? | ? |
+| **HARP (ours)** | — | **pose only** | ? | ? |
+
+⚠verify = pull the exact R@5/R@10 from the UPRet (arXiv:2405.19689) and C²RL
+(arXiv:2408.09949) PDFs before the table goes in the paper — never cite the
+approximations above.
+
+Our three rows give the same ladder as on iSign (frozen → uniform → hand-aware),
+so the table shows BOTH where pose-only sits vs RGB methods AND that the
+hand-aware gap replicates on ASL.
 
 **Honest expectation:** we are pose-only; SEDS/CiCo use RGB (+pretrained I3D /
 video features). We will likely land BELOW them. That is fine and must be framed
