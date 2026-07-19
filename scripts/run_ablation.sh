@@ -97,6 +97,18 @@ run cls_pool --text-model "$BGE" --embedding-dim 1024 --hand-aware --text-poolin
 run sem080 --text-model "$BGE" --embedding-dim 1024 --hand-aware --semantic-threshold 0.80
 run sem090 --text-model "$BGE" --embedding-dim 1024 --hand-aware --semantic-threshold 0.90
 
+# (Issue 1.3) closest SignCLIP-style reproduction on iSign: single linear frame
+# projection (no part structure) + vanilla Transformer + temporal mean pooling.
+run signclip_style --text-model "$BGE" --embedding-dim 1024 --frame-encoder linear --temporal transformer --pose-pooling mean
+
+# (Issue 1.4) simple input baselines on the uniform encoder: which body parts
+# does the task actually need? (input stays 1662-d; unused parts zeroed)
+run pose_only --text-model "$BGE" --embedding-dim 1024 --input-parts pose
+run face_free --text-model "$BGE" --embedding-dim 1024 --input-parts pose hands
+
+# (Issue 10) reduced-face landmarks (lips/eyebrows/eyes only) on the reference.
+run face_keep --text-model "$BGE" --embedding-dim 1024 --hand-aware --face-keep
+
 echo "ALL ABLATION RUNS COMPLETE."
 echo "Next: bash scripts/run_significance.sh — encodes TEST once per row, then runs"
 echo "bootstrap CIs, the re-rank sweep, error analysis, caption stats and split audits."

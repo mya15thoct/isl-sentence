@@ -65,6 +65,25 @@ def _build_face_keep_mask() -> np.ndarray:
 
 FACE_KEEP_MASK = _build_face_keep_mask()
 
+# Layout of the 1662-d MediaPipe Holistic frame vector.
+PART_SLICES = {"pose": (0, 132), "face": (132, 1536), "hands": (1536, 1662)}
+
+
+def build_part_mask(keep_parts: tuple[str, ...]) -> np.ndarray:
+    """1/0 mask keeping only the listed body parts (input stays 1662-d).
+
+    Used for the pose-only / face-free input baselines: parts not listed are
+    zeroed, exactly like missing detections, so the architecture is unchanged.
+    """
+    unknown = set(keep_parts) - set(PART_SLICES)
+    if unknown:
+        raise ValueError(f"unknown parts {sorted(unknown)}; choose from {sorted(PART_SLICES)}")
+    mask = np.zeros(KEYPOINT_DIM, dtype=np.float32)
+    for part in keep_parts:
+        start, end = PART_SLICES[part]
+        mask[start:end] = 1.0
+    return mask
+
 
 def add_motion_features(keypoints: np.ndarray, normalize: bool = True) -> np.ndarray:
     """Append per-frame velocity (Δ) and acceleration (ΔΔ) to raw positions.
@@ -136,6 +155,7 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         augment_methods: list[str] | None = None,
         motion_features: bool = False,
         face_keep: bool = False,
+        input_parts: tuple[str, ...] | None = None,
     ) -> None:
         rows = read_csv(manifest)
         if limit is not None:
@@ -168,6 +188,11 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         self.augment_methods = augment_methods or []
         self.motion_features = motion_features
         self.face_keep = face_keep
+        # None or the full part set = no masking (avoids a pointless multiply).
+        if input_parts is not None and set(input_parts) != set(PART_SLICES):
+            self.part_mask: np.ndarray | None = build_part_mask(tuple(input_parts))
+        else:
+            self.part_mask = None
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -187,6 +212,8 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
                 probability=self.augment_probability,
             )
         keypoints = sample_keypoints(keypoints, self.max_frames, self.sample_mode)
+        if self.part_mask is not None:
+            keypoints = keypoints * self.part_mask  # pose-only / face-free input baselines
         if self.face_keep:
             keypoints = keypoints * FACE_KEEP_MASK  # zero non-mouth/eyebrow/eye face points
         if self.motion_features:

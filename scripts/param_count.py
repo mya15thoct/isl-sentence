@@ -44,6 +44,9 @@ VARIANTS: dict[str, dict] = {
     "CLIP4Clip-meanP-style (uniform, 0 layers, mean pool)": dict(
         hand_aware=False, num_layers=0, pool_type="mean"
     ),
+    "SignCLIP-style (linear frames, vanilla Transformer, mean pool)": dict(
+        hand_aware=False, frame_encoder="linear", temporal="transformer", pool_type="mean"
+    ),
 }
 
 

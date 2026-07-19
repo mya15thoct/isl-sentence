@@ -15,10 +15,15 @@ CKPT=$ROOT/checkpoints
 EVAL=$ROOT/eval
 mkdir -p "$EVAL"
 
+# ---- 0. Environment report (Issue 9) — auto-fills the repro checklist -------
+python scripts/env_report.py --checkpoint "$CKPT/abl_ema50/checkpoint_last.pt" \
+  | tee "$EVAL/environment.md"
+
 # ---- 1. Encode TEST once per system: metrics JSON + embedding dump ----------
 ROWS="ema50 ema50_s43 ema50_s44 no_handaware no_handaware_s43 no_handaware_s44 \
 no_redundancy minilm_text ctx_hands_only ctx_hands_pose ctx_hands_face \
-frozen_text clip4clip_meanp cls_pool sem080 sem090"
+frozen_text clip4clip_meanp cls_pool sem080 sem090 \
+signclip_style pose_only face_free face_keep"
 for d in $ROWS; do
   ckpt=$CKPT/abl_$d/checkpoint_ema.pt
   if [ ! -f "$ckpt" ]; then echo "--- skip $d (no checkpoint yet)"; continue; fi
@@ -74,6 +79,12 @@ boot "fine-tuned vs frozen text encoder" \
 boot "HARP vs CLIP4Clip-meanP-style dual encoder" \
   --dump-a "$EVAL/emb_ema50.pt" --dump-b "$EVAL/emb_clip4clip_meanp.pt" \
   --out "$EVAL/boot_clip4clip.json"
+boot "HARP vs SignCLIP-style reproduction" \
+  --dump-a "$EVAL/emb_ema50.pt" --dump-b "$EVAL/emb_signclip_style.pt" \
+  --out "$EVAL/boot_signclip.json"
+boot "full face vs reduced-face landmarks (face-keep)" \
+  --dump-a "$EVAL/emb_ema50.pt" --dump-b "$EVAL/emb_face_keep.pt" \
+  --out "$EVAL/boot_facekeep.json"
 boot "3-seed ensembles: HARP vs uniform fusion" \
   --dump-a "$EVAL/emb_ens_harp.pt" --dump-b "$EVAL/emb_ens_uniform.pt" \
   --label-a HARP-ens --label-b uniform-ens --out "$EVAL/boot_ensembles.json"
@@ -83,8 +94,19 @@ python -m src.retrieval.rerank_sweep --dump "$EVAL/emb_ema50.pt" \
   --out "$EVAL/rerank_sweep.json" | tee "$EVAL/rerank_sweep.md"
 
 # ---- 4. Error analysis (Issue 7) --------------------------------------------
+# --manifest joins extra per-row columns by uid when present (category, quality
+# metrics, ...); missing columns are skipped with a warning, so this is safe.
 python -m src.retrieval.error_analysis --dump "$EVAL/emb_ema50.pt" \
+  --manifest "$TEST" --join-columns category \
   --report "$EVAL/error_analysis.md" --out "$EVAL/error_analysis.json"
+
+# ---- 4b. Inference-time robustness (Issue 5.3): missing hands / frame rate /
+#          detector noise — GPU, ~6 TEST encodes, skip if already produced -----
+if [ ! -f "$EVAL/robustness.md" ]; then
+  python -m src.retrieval.robustness_eval \
+    --manifest "$TEST" --checkpoint "$CKPT/abl_ema50/checkpoint_ema.pt" \
+    --report "$EVAL/robustness.md" --out "$EVAL/robustness.json"
+fi
 
 # ---- 5. Duplicate-caption statistics (Issue 3) -------------------------------
 python -m src.data.caption_group_stats \

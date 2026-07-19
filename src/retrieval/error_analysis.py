@@ -43,9 +43,56 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-failures", type=int, default=20)
     parser.add_argument("--neighbours", type=int, default=3)
     parser.add_argument("--hub-top", type=int, default=10)
+    parser.add_argument("--manifest", type=Path,
+                        help="optional: manifest CSV to join extra columns by uid")
+    parser.add_argument("--join-columns", nargs="*", default=["category"],
+                        help="manifest columns to stratify by (numeric -> quartiles); "
+                             "missing columns are skipped with a warning")
     parser.add_argument("--report", type=Path, help="Markdown report path")
     parser.add_argument("--out", type=Path, help="JSON summary path")
     return parser.parse_args()
+
+
+def manifest_strata_labels(
+    manifest: Path, uids: list[str], column: str
+) -> list[str] | None:
+    """Per-query labels for a manifest column, joined by uid.
+
+    Numeric columns are binned into quartiles; categorical values pass through.
+    Returns None (with a warning) when the column is absent or uids don't match.
+    """
+    from src.retrieval.dataset import read_csv
+
+    rows = read_csv(manifest)
+    if not rows or column not in rows[0]:
+        print(f"[join] column {column!r} not in manifest — skipped")
+        return None
+    by_uid = {row.get("uid", ""): row.get(column, "").strip() for row in rows}
+    values = [by_uid.get(uid) for uid in uids]
+    matched = sum(v is not None for v in values)
+    if matched < 0.9 * len(uids):
+        print(f"[join] only {matched}/{len(uids)} uids matched for {column!r} — skipped")
+        return None
+    present = [v for v in values if v]
+    try:
+        numbers = [float(v) for v in present]
+    except ValueError:
+        return [v if v else "(missing)" for v in values]
+    qs = torch.quantile(torch.tensor(numbers), torch.tensor([0.25, 0.5, 0.75])).tolist()
+
+    def bucket(v: str | None) -> str:
+        if not v:
+            return "(missing)"
+        x = float(v)
+        if x <= qs[0]:
+            return f"Q1 (<= {qs[0]:.3g})"
+        if x <= qs[1]:
+            return f"Q2 (<= {qs[1]:.3g})"
+        if x <= qs[2]:
+            return f"Q3 (<= {qs[2]:.3g})"
+        return f"Q4 (> {qs[2]:.3g})"
+
+    return [bucket(v) for v in values]
 
 
 def bin_label(value: int, edges: list[int]) -> str:
@@ -150,6 +197,18 @@ def main() -> None:
     rows = stratify(exact, frame_labels, frame_order)
     sections += ["## By clip length (frames, capped)", markdown_table(rows)]
     summary["by_frames"] = rows
+
+    # 3b. optional manifest-joined strata (category, hand-detection ratio, ...)
+    if args.manifest:
+        uids: list[str] = dump.get("uids", [])
+        for column in args.join_columns:
+            labels = manifest_strata_labels(args.manifest, uids, column)
+            if labels is None:
+                continue
+            order = sorted(set(labels))
+            rows = stratify(exact, labels, order)
+            sections += [f"## By manifest column `{column}`", markdown_table(rows)]
+            summary[f"by_{column}"] = rows
 
     # 4. hubness before/after Sinkhorn
     sections.append("## Hub candidates in top-10 lists (V2T)")

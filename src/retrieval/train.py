@@ -88,6 +88,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--face-keep", action="store_true", help="zero all face landmarks except lips/eyebrows/eyes (cut face noise); input stays 1662-d")
     parser.add_argument("--pose-pooling", choices=("attention", "mean"), default="attention", help="temporal pooling over frames; 'mean' + --pose-layers 0 gives the CLIP4Clip-meanP-style baseline")
     parser.add_argument("--text-pooling", choices=("mean", "cls"), default="mean", help="sentence pooling for the text encoder (bge-large officially uses CLS)")
+    parser.add_argument("--frame-encoder", choices=("parts", "linear"), default="parts", help="'linear' = SignCLIP-style single linear frame projection (not hand-aware)")
+    parser.add_argument("--temporal", choices=("conformer", "transformer"), default="conformer", help="temporal block type; 'transformer' = vanilla pre-norm layers (SignCLIP-style baseline)")
+    parser.add_argument("--input-parts", nargs="+", choices=("pose", "face", "hands"), default=["pose", "face", "hands"], help="zero all body parts NOT listed (input stays 1662-d) — pose-only / face-free baselines")
     parser.add_argument("--no-redundancy", action="store_true", help="ablation: disable redundancy grouping (identical captions become hard negatives)")
     parser.add_argument("--queue-size", type=int, default=0, help="cross-batch memory bank size (extra contrastive negatives); 0 = off")
     parser.add_argument("--queue-warmup-epochs", type=int, default=2, help="train in-batch only for this many epochs before activating the memory bank (avoids stale-negative collapse); queue is still filled during warm-up")
@@ -440,6 +443,8 @@ def main() -> None:
         context_parts=tuple(args.context_parts),
         motion=args.motion_features,
         pose_pooling=args.pose_pooling,
+        frame_encoder=args.frame_encoder,
+        temporal=args.temporal,
         text_model_name=args.text_model,
         max_text_length=args.max_text_length,
         text_pooling=args.text_pooling,
@@ -467,6 +472,7 @@ def main() -> None:
         augment_methods=args.augment_methods,
         motion_features=args.motion_features,
         face_keep=args.face_keep,
+        input_parts=tuple(args.input_parts),
     )
     val_dataset = RetrievalDataset(
         manifest=args.val_manifest,
@@ -477,6 +483,7 @@ def main() -> None:
         limit=args.limit,
         motion_features=args.motion_features,
         face_keep=args.face_keep,
+        input_parts=tuple(args.input_parts),
     )
     train_loader = build_loader(train_dataset, args, shuffle=True, device=device)
     val_loader = build_loader(val_dataset, args, shuffle=False, device=device)

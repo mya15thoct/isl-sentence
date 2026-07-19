@@ -83,6 +83,8 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
         context_parts=tuple(cfg.get("context_parts", ("pose", "face"))),
         motion=bool(cfg.get("motion_features", False)),
         pose_pooling=str(cfg.get("pose_pooling", "attention")),
+        frame_encoder=str(cfg.get("frame_encoder", "parts")),
+        temporal=str(cfg.get("temporal", "conformer")),
         text_model_name=str(cfg.get("text_model", DEFAULT_TEXT_MODEL)),
         max_text_length=int(cfg.get("max_text_length", 64)),
         text_pooling=str(cfg.get("text_pooling", "mean")),
@@ -91,10 +93,14 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
     return model.to(device).eval()
 
 
-def checkpoint_input_flags(path: Path) -> tuple[bool, bool]:
-    """(motion_features, face_keep) the checkpoint was trained with."""
+def checkpoint_input_flags(path: Path) -> tuple[bool, bool, tuple[str, ...]]:
+    """(motion_features, face_keep, input_parts) the checkpoint was trained with."""
     cfg = torch.load(path, map_location="cpu", weights_only=False).get("config", {})
-    return bool(cfg.get("motion_features", False)), bool(cfg.get("face_keep", False))
+    return (
+        bool(cfg.get("motion_features", False)),
+        bool(cfg.get("face_keep", False)),
+        tuple(cfg.get("input_parts", ("pose", "face", "hands"))),
+    )
 
 
 @torch.no_grad()
@@ -230,11 +236,13 @@ def main() -> None:
     device = torch.device(args.device if torch.cuda.is_available() or args.device == "cpu" else "cpu")
 
     # Match the input representation the checkpoints were trained with.
-    motion, face_keep = checkpoint_input_flags(args.checkpoints[0])
+    motion, face_keep, input_parts = checkpoint_input_flags(args.checkpoints[0])
     if motion:
         print("checkpoints use motion features (position + velocity + acceleration)")
     if face_keep:
         print("checkpoints use face-keep (lips/eyebrows/eyes only)")
+    if set(input_parts) != {"pose", "face", "hands"}:
+        print(f"checkpoints use input parts: {input_parts}")
     dataset = RetrievalDataset(
         manifest=args.manifest,
         text_column=args.text_column,
@@ -244,6 +252,7 @@ def main() -> None:
         limit=args.limit,
         motion_features=motion,
         face_keep=face_keep,
+        input_parts=input_parts,
     )
     loader = DataLoader(
         dataset,

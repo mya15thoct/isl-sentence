@@ -31,6 +31,8 @@ class PoseTextRetrievalModel(nn.Module):
         context_parts: tuple[str, ...] = ("pose", "face"),
         motion: bool = False,
         pose_pooling: str = "attention",
+        frame_encoder: str = "parts",
+        temporal: str = "conformer",
         text_model_name: str = DEFAULT_TEXT_MODEL,
         max_text_length: int = 64,
         text_pooling: str = "mean",
@@ -48,6 +50,8 @@ class PoseTextRetrievalModel(nn.Module):
             context_parts=context_parts,
             motion=motion,
             pool_type=pose_pooling,
+            frame_encoder=frame_encoder,
+            temporal=temporal,
         )
         self.text_encoder = TextEncoder(
             model_name=text_model_name,

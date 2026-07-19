@@ -96,6 +96,26 @@ class BodyPartFrameEncoder(nn.Module):
         return self.fusion(features)
 
 
+class LinearFrameEncoder(nn.Module):
+    """SignCLIP-style per-frame embedding: one linear projection of the full
+    keypoint vector, with no body-part structure. Used to reproduce a
+    SignCLIP-like pose encoder as closely as possible on continuous captions
+    (pair with ``temporal="transformer"`` and mean pooling)."""
+
+    def __init__(self, input_dim: int = KEYPOINT_DIM, model_dim: int = 256, dropout: float = 0.1):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, model_dim),
+            nn.LayerNorm(model_dim),
+            nn.Dropout(dropout),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.size(-1) != KEYPOINT_DIM:
+            raise ValueError(f"Expected last dim {KEYPOINT_DIM}, got {x.size(-1)}")
+        return self.net(x)
+
+
 class HandAwareFrameEncoder(nn.Module):
     """Hand-centric per-frame encoder.
 
@@ -327,6 +347,28 @@ class ConformerBlock(nn.Module):
         return x.masked_fill(~valid_mask.unsqueeze(-1), 0.0)
 
 
+class TransformerBlock(nn.Module):
+    """Vanilla pre-norm Transformer encoder layer with the same
+    ``(x, valid_mask)`` interface as ConformerBlock — the temporal stack of the
+    SignCLIP-style baseline (no convolution module, no macaron FFN)."""
+
+    def __init__(self, model_dim: int = 256, num_heads: int = 4, ff_expansion: int = 4, dropout: float = 0.1):
+        super().__init__()
+        self.layer = nn.TransformerEncoderLayer(
+            d_model=model_dim,
+            nhead=num_heads,
+            dim_feedforward=model_dim * ff_expansion,
+            dropout=dropout,
+            activation="gelu",
+            batch_first=True,
+            norm_first=True,
+        )
+
+    def forward(self, x: torch.Tensor, valid_mask: torch.Tensor) -> torch.Tensor:
+        x = self.layer(x, src_key_padding_mask=~valid_mask)
+        return x.masked_fill(~valid_mask.unsqueeze(-1), 0.0)
+
+
 class AttentionPool(nn.Module):
     def __init__(self, model_dim: int = 256):
         super().__init__()
@@ -366,12 +408,20 @@ class KeypointConformerEncoder(nn.Module):
         context_parts: tuple[str, ...] = ("pose", "face"),
         motion: bool = False,
         pool_type: str = "attention",
+        frame_encoder: str = "parts",
+        temporal: str = "conformer",
     ):
         super().__init__()
         if pool_type not in ("attention", "mean"):
             raise ValueError(f"pool_type must be 'attention' or 'mean', got {pool_type!r}")
+        if frame_encoder not in ("parts", "linear"):
+            raise ValueError(f"frame_encoder must be 'parts' or 'linear', got {frame_encoder!r}")
+        if temporal not in ("conformer", "transformer"):
+            raise ValueError(f"temporal must be 'conformer' or 'transformer', got {temporal!r}")
         self.normalize_output = normalize_output
         if hand_aware:
+            if frame_encoder != "parts":
+                raise ValueError("hand-aware implies the part-structured frame encoder")
             self.frame_encoder = HandAwareFrameEncoder(
                 model_dim=model_dim, num_heads=num_heads, dropout=dropout,
                 context_parts=context_parts, motion=motion,
@@ -379,19 +429,20 @@ class KeypointConformerEncoder(nn.Module):
         else:
             if motion:
                 raise ValueError("motion features are only implemented for the hand-aware encoder")
-            self.frame_encoder = BodyPartFrameEncoder(model_dim=model_dim, dropout=dropout)
+            if frame_encoder == "linear":
+                self.frame_encoder = LinearFrameEncoder(model_dim=model_dim, dropout=dropout)
+            else:
+                self.frame_encoder = BodyPartFrameEncoder(model_dim=model_dim, dropout=dropout)
         self.downsample = TemporalDownsample(model_dim=model_dim, stride=downsample_stride)
-        self.layers = nn.ModuleList(
-            [
-                ConformerBlock(
-                    model_dim=model_dim,
-                    num_heads=num_heads,
-                    conv_kernel=conv_kernel,
-                    dropout=dropout,
-                )
-                for _ in range(num_layers)
-            ]
-        )
+        if temporal == "conformer":
+            make_block = lambda: ConformerBlock(
+                model_dim=model_dim, num_heads=num_heads, conv_kernel=conv_kernel, dropout=dropout
+            )
+        else:
+            make_block = lambda: TransformerBlock(
+                model_dim=model_dim, num_heads=num_heads, dropout=dropout
+            )
+        self.layers = nn.ModuleList([make_block() for _ in range(num_layers)])
         self.pool = AttentionPool(model_dim) if pool_type == "attention" else MeanPool()
         self.projection = nn.Sequential(
             nn.Linear(model_dim, model_dim),
