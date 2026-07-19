@@ -44,11 +44,19 @@ wait_gpu () {
 if [ "$WITH_H2S" = 1 ]; then
   if [ -f "$H2S/manifests/how2sign_test.csv" ]; then
     echo "== A. How2Sign data already prepared — skip =="
+  elif bash cross_dataset/download_how2sign.sh; then
+    echo "== A. How2Sign extract (MediaPipe, CPU, hours) + manifests =="
+    for s in train val test; do
+      python cross_dataset/extract_how2sign.py \
+        --clips "$H2S/clips_$s" --out "$H2S/keypoints/$s" --delete-after
+    done
+    python cross_dataset/build_how2sign_manifest.py \
+      --csv-dir "$H2S/text" --keypoint-root "$H2S/keypoints" --out-dir "$H2S/manifests"
   else
-    echo "== A. How2Sign download + extract + manifests (hours, CPU) =="
-    bash cross_dataset/download_how2sign.sh
-    python cross_dataset/extract_how2sign.py --delete-after
-    python cross_dataset/build_how2sign_manifest.py
+    echo "!! How2Sign download failed (Google Drive quota? resets within ~24 h)."
+    echo "!! Skipping stages A and E this run — everything on iSign continues."
+    echo "!! Later, just RE-RUN the same tmux command; it resumes what is missing."
+    WITH_H2S=0
   fi
 fi
 
@@ -63,9 +71,13 @@ bash scripts/run_significance.sh
 
 # ---- E. How2Sign ladder ------------------------------------------------------
 if [ "$WITH_H2S" = 1 ]; then
-  wait_gpu
-  echo "== E. How2Sign training + official-pool eval + bootstrap =="
-  bash cross_dataset/run_how2sign.sh
+  if [ ! -f "$H2S/manifests/how2sign_test.csv" ]; then
+    echo "!! How2Sign manifests missing — skip stage E (re-run later to resume)"
+  else
+    wait_gpu
+    echo "== E. How2Sign training + official-pool eval + bootstrap =="
+    bash cross_dataset/run_how2sign.sh
+  fi
 fi
 
 echo "== ALL DONE $(date) =="

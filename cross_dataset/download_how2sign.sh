@@ -34,21 +34,32 @@ for v in FOLDER_CLIPS_TRAIN ID_CLIPS_VAL ID_CLIPS_TEST ID_CSV_TRAIN ID_CSV_VAL I
   fi
 done
 
+# Google Drive rate-limits shared files ("Too many users have viewed or
+# downloaded this file recently", resets within ~24 h). Every step below skips
+# what already exists, so just RE-RUN this script later to fetch the rest.
+
 echo "== CSVs =="
-gdown "$ID_CSV_TRAIN" -O "$ROOT/text/how2sign_realigned_train.csv"
-gdown "$ID_CSV_VAL"   -O "$ROOT/text/how2sign_realigned_val.csv"
-gdown "$ID_CSV_TEST"  -O "$ROOT/text/how2sign_realigned_test.csv"
+[ -s "$ROOT/text/how2sign_realigned_train.csv" ] || gdown "$ID_CSV_TRAIN" -O "$ROOT/text/how2sign_realigned_train.csv"
+[ -s "$ROOT/text/how2sign_realigned_val.csv" ]   || gdown "$ID_CSV_VAL"   -O "$ROOT/text/how2sign_realigned_val.csv"
+[ -s "$ROOT/text/how2sign_realigned_test.csv" ]  || gdown "$ID_CSV_TEST"  -O "$ROOT/text/how2sign_realigned_test.csv"
 
 echo "== clips: val + test first (small, single-file zips) =="
-gdown "$ID_CLIPS_VAL"  -O "$ROOT/zips/clips_val.zip"
-gdown "$ID_CLIPS_TEST" -O "$ROOT/zips/clips_test.zip"
 for s in val test; do
+  if [ -n "$(ls -A "$ROOT/clips_$s" 2>/dev/null)" ]; then
+    echo "== clips_$s already present — skip =="
+    continue
+  fi
+  id_var="ID_CLIPS_$(echo "$s" | tr '[:lower:]' '[:upper:]')"
+  gdown "${!id_var}" -O "$ROOT/zips/clips_$s.zip"
   echo "== unzip $s =="
   unzip -q -j "$ROOT/zips/clips_$s.zip" -d "$ROOT/clips_$s"
   rm -f "$ROOT/zips/clips_$s.zip"
 done
 
 echo "== clips: train (Drive FOLDER, ~31 GB, may be split across multiple files) =="
+if [ -n "$(ls -A "$ROOT/clips_train" 2>/dev/null)" ]; then
+  echo "== clips_train already present — skip download =="
+else
 gdown --folder "https://drive.google.com/drive/folders/$FOLDER_CLIPS_TRAIN" -O "$ROOT/clips_train_raw"
 # The folder may contain one or several zip/tar parts, or already-extracted
 # videos. Handle both without guessing wrong:
@@ -66,5 +77,6 @@ else
     -exec mv -t "$ROOT/clips_train" {} +
 fi
 rmdir "$ROOT/clips_train_raw" 2>/dev/null || echo "note: $ROOT/clips_train_raw not empty, check leftovers"
+fi
 
 echo "done. next: extract_how2sign.py (use --delete-after to free clips as you go)"
