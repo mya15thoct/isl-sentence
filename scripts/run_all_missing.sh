@@ -19,6 +19,13 @@ set -uo pipefail
 
 ROOT=${ROOT:-/mnt/recover/ngan/ISL-Sequences}
 H2S=${H2S:-/mnt/recover/ngan/How2Sign}
+
+# /tmp lives on the small root disk, which other jobs have filled before —
+# killing our DataLoader workers with ENOSPC in /tmp/pymp-*. Point all Python
+# temp files (multiprocessing sockets, tempfile) at the big data disk instead.
+export TMPDIR="$ROOT/tmp"
+mkdir -p "$TMPDIR"
+
 WITH_H2S=0
 [ "${1:-}" = "--with-how2sign" ] && WITH_H2S=1
 

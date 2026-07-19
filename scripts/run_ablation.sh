@@ -20,6 +20,10 @@ BGE="BAAI/bge-large-en-v1.5"
 MINILM="sentence-transformers/all-MiniLM-L6-v2"
 mkdir -p "$LOG"
 
+# Keep Python temp off the small root disk (/tmp ENOSPC killed a run before).
+export TMPDIR="$ROOT/tmp"
+mkdir -p "$TMPDIR"
+
 # ---- shared protocol (identical for every row) ----
 # EXACTLY the abl_ema50 headline recipe (50 ep, batch 128, EMA 0.999, seed 42), so
 # the reference row IS the already-trained abl_ema50 checkpoint and every variant

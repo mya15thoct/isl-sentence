@@ -15,6 +15,10 @@ CKPT=$ROOT/checkpoints
 EVAL=$ROOT/eval
 mkdir -p "$EVAL"
 
+# Keep Python temp off the small root disk (/tmp ENOSPC killed a run before).
+export TMPDIR="$ROOT/tmp"
+mkdir -p "$TMPDIR"
+
 # ---- 0. Environment report (Issue 9) — auto-fills the repro checklist -------
 python scripts/env_report.py --checkpoint "$CKPT/abl_ema50/checkpoint_last.pt" \
   | tee "$EVAL/environment.md"
