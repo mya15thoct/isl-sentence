@@ -34,18 +34,22 @@ def mean_pool(token_embeddings: torch.Tensor, attention_mask: torch.Tensor) -> t
 
 
 class TextEncoder(nn.Module):
-    """MiniLM/Sentence-BERT encoder with mean pooling and optional projection."""
+    """MiniLM/Sentence-BERT encoder with mean or CLS pooling and optional projection."""
 
     def __init__(
         self,
         model_name: str = DEFAULT_TEXT_MODEL,
         output_dim: int = 384,
         max_length: int = 64,
+        pooling: str = "mean",
     ) -> None:
         super().__init__()
         _require_transformers()
         from transformers import AutoModel, AutoTokenizer
 
+        if pooling not in ("mean", "cls"):
+            raise ValueError(f"pooling must be 'mean' or 'cls', got {pooling!r}")
+        self.pooling = pooling
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.encoder = AutoModel.from_pretrained(model_name)
         self.max_length = max_length
@@ -65,7 +69,10 @@ class TextEncoder(nn.Module):
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        pooled = mean_pool(outputs.last_hidden_state, attention_mask)
+        if self.pooling == "cls":
+            pooled = outputs.last_hidden_state[:, 0]
+        else:
+            pooled = mean_pool(outputs.last_hidden_state, attention_mask)
         if self.projection is not None:
             pooled = self.projection(pooled)
         return pooled

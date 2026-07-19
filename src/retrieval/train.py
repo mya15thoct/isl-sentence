@@ -86,6 +86,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--context-parts", nargs="*", choices=["pose", "face"], default=["pose", "face"], help="hand-aware ablation: which parts feed the cross-attention context (empty = hands only)")
     parser.add_argument("--motion-features", action="store_true", help="append per-frame velocity (Δ) and acceleration (ΔΔ) to positions (input becomes 3×1662); hand-aware only")
     parser.add_argument("--face-keep", action="store_true", help="zero all face landmarks except lips/eyebrows/eyes (cut face noise); input stays 1662-d")
+    parser.add_argument("--pose-pooling", choices=("attention", "mean"), default="attention", help="temporal pooling over frames; 'mean' + --pose-layers 0 gives the CLIP4Clip-meanP-style baseline")
+    parser.add_argument("--text-pooling", choices=("mean", "cls"), default="mean", help="sentence pooling for the text encoder (bge-large officially uses CLS)")
     parser.add_argument("--no-redundancy", action="store_true", help="ablation: disable redundancy grouping (identical captions become hard negatives)")
     parser.add_argument("--queue-size", type=int, default=0, help="cross-batch memory bank size (extra contrastive negatives); 0 = off")
     parser.add_argument("--queue-warmup-epochs", type=int, default=2, help="train in-batch only for this many epochs before activating the memory bank (avoids stale-negative collapse); queue is still filled during warm-up")
@@ -437,8 +439,10 @@ def main() -> None:
         hand_aware=args.hand_aware,
         context_parts=tuple(args.context_parts),
         motion=args.motion_features,
+        pose_pooling=args.pose_pooling,
         text_model_name=args.text_model,
         max_text_length=args.max_text_length,
+        text_pooling=args.text_pooling,
     ).to(device)
 
     if args.init_checkpoint is not None:
@@ -480,13 +484,19 @@ def main() -> None:
     text_params = list(model.text_encoder.parameters())
     text_ids = {id(p) for p in text_params}
     other_params = [p for p in model.parameters() if id(p) not in text_ids]
-    optimizer = torch.optim.AdamW(
-        [
+    if args.text_lr <= 0.0:
+        # Frozen-text baseline: skip the (expensive) backward through the text
+        # encoder entirely instead of stepping it with lr=0.
+        for p in text_params:
+            p.requires_grad_(False)
+        param_groups = [{"params": other_params, "lr": args.lr}]
+        print("text encoder FROZEN (text-lr <= 0)")
+    else:
+        param_groups = [
             {"params": other_params, "lr": args.lr},
             {"params": text_params, "lr": args.text_lr},
-        ],
-        weight_decay=args.weight_decay,
-    )
+        ]
+    optimizer = torch.optim.AdamW(param_groups, weight_decay=args.weight_decay)
 
     steps_per_epoch = max(1, len(train_loader))
     total_steps = steps_per_epoch * args.epochs

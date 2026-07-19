@@ -72,12 +72,31 @@ run ctx_hands_pose --text-model "$BGE" --embedding-dim 1024 --hand-aware --conte
 run ctx_hands_face --text-model "$BGE" --embedding-dim 1024 --hand-aware --context-parts face
 # hands + pose + face = the `reference` row above (full context)
 
+# ---- REVIEW-FIX rows (Q1 revision: baselines, seeds, design-choice ablations) ----
+# NOTE: later flags override $COMMON (argparse keeps the last occurrence), so
+# e.g. `--seed 43` after $COMMON takes effect.
+
+# (Issue 4) 2 extra seeds for the DECISIVE baseline. The reference already has
+# 3 seeds (abl_ema50{,_s43,_s44}); the uniform-fusion baseline gets the same
+# treatment so hand-aware vs uniform is mean±std on BOTH sides.
+run no_handaware_s43 --text-model "$BGE" --embedding-dim 1024 --seed 43
+run no_handaware_s44 --text-model "$BGE" --embedding-dim 1024 --seed 44
+
+# (Issue 1) frozen text encoder — completes the frozen -> uniform -> HARP
+# ladder on iSign, mirroring cross_dataset/run_how2sign.sh.
+run frozen_text --text-model "$BGE" --embedding-dim 1024 --hand-aware --text-lr 0
+
+# (Issue 1) CLIP4Clip-meanP-style temporal dual encoder: uniform frame MLP,
+# NO Conformer blocks, temporal mean pooling — an independent baseline family.
+run clip4clip_meanp --text-model "$BGE" --embedding-dim 1024 --pose-layers 0 --pose-pooling mean
+
+# (Issue 10 / defense Q7) CLS vs mean pooling for bge-large.
+run cls_pool --text-model "$BGE" --embedding-dim 1024 --hand-aware --text-pooling cls
+
+# (Issue 10) semantic-positive threshold sensitivity (reference uses 0.85).
+run sem080 --text-model "$BGE" --embedding-dim 1024 --hand-aware --semantic-threshold 0.80
+run sem090 --text-model "$BGE" --embedding-dim 1024 --hand-aware --semantic-threshold 0.90
+
 echo "ALL ABLATION RUNS COMPLETE."
-echo "Next — score every row (incl. the ema50 reference) with the SAME evaluator,"
-echo "using checkpoint_ema.pt and the TEST split (Sinkhorn is reported alongside"
-echo "cosine/DSL automatically):"
-echo "  for d in ema50 no_handaware no_redundancy minilm_text ctx_hands_only ctx_hands_pose ctx_hands_face; do"
-echo "    python -m src.retrieval.evaluate_rerank \\"
-echo "      --manifest $ROOT/manifests/isign_retrieval_videosplit_test.csv \\"
-echo "      --checkpoints $CKPT/abl_\$d/checkpoint_ema.pt \\"
-echo "      --pool-sizes 0 2000 1000 --out $ROOT/eval/abl_\$d.json; done"
+echo "Next: bash scripts/run_significance.sh — encodes TEST once per row, then runs"
+echo "bootstrap CIs, the re-rank sweep, error analysis, caption stats and split audits."

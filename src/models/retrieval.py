@@ -30,8 +30,10 @@ class PoseTextRetrievalModel(nn.Module):
         hand_aware: bool = False,
         context_parts: tuple[str, ...] = ("pose", "face"),
         motion: bool = False,
+        pose_pooling: str = "attention",
         text_model_name: str = DEFAULT_TEXT_MODEL,
         max_text_length: int = 64,
+        text_pooling: str = "mean",
     ) -> None:
         super().__init__()
         self.pose_encoder = KeypointConformerEncoder(
@@ -45,11 +47,13 @@ class PoseTextRetrievalModel(nn.Module):
             hand_aware=hand_aware,
             context_parts=context_parts,
             motion=motion,
+            pool_type=pose_pooling,
         )
         self.text_encoder = TextEncoder(
             model_name=text_model_name,
             output_dim=embedding_dim,
             max_length=max_text_length,
+            pooling=text_pooling,
         )
         self.embedding_dim = embedding_dim
         # CLIP-style learnable temperature (stored as log scale).

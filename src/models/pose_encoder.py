@@ -343,6 +343,14 @@ class AttentionPool(nn.Module):
         return torch.sum(x * weights, dim=1)
 
 
+class MeanPool(nn.Module):
+    """Masked temporal mean (CLIP4Clip meanP-style parameter-free pooling)."""
+
+    def forward(self, x: torch.Tensor, valid_mask: torch.Tensor) -> torch.Tensor:
+        mask = valid_mask.unsqueeze(-1).to(x.dtype)
+        return (x * mask).sum(dim=1) / mask.sum(dim=1).clamp_min(1e-6)
+
+
 class KeypointConformerEncoder(nn.Module):
     def __init__(
         self,
@@ -357,8 +365,11 @@ class KeypointConformerEncoder(nn.Module):
         hand_aware: bool = False,
         context_parts: tuple[str, ...] = ("pose", "face"),
         motion: bool = False,
+        pool_type: str = "attention",
     ):
         super().__init__()
+        if pool_type not in ("attention", "mean"):
+            raise ValueError(f"pool_type must be 'attention' or 'mean', got {pool_type!r}")
         self.normalize_output = normalize_output
         if hand_aware:
             self.frame_encoder = HandAwareFrameEncoder(
@@ -381,7 +392,7 @@ class KeypointConformerEncoder(nn.Module):
                 for _ in range(num_layers)
             ]
         )
-        self.pool = AttentionPool(model_dim)
+        self.pool = AttentionPool(model_dim) if pool_type == "attention" else MeanPool()
         self.projection = nn.Sequential(
             nn.Linear(model_dim, model_dim),
             nn.GELU(),

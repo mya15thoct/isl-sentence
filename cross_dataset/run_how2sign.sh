@@ -45,6 +45,14 @@ for d in harp no_handaware frozen_text; do
   python -m src.retrieval.evaluate_rerank \
     --manifest "$TEST" \
     --checkpoints "$CKPT/h2s_$d/checkpoint_ema.pt" \
-    --pool-sizes 0 --out "$ROOT/eval/h2s_$d.json"
+    --pool-sizes 0 --out "$ROOT/eval/h2s_$d.json" \
+    --dump-embeddings "$ROOT/eval/emb_h2s_$d.pt"
 done
+
+# The transfer claim is the hand-aware vs uniform GAP replicating on ASL —
+# significance-test it the same way as on iSign (paired bootstrap, 95% CI).
+python -m src.retrieval.bootstrap_compare \
+  --dump-a "$ROOT/eval/emb_h2s_harp.pt" --dump-b "$ROOT/eval/emb_h2s_no_handaware.pt" \
+  --label-a HARP --label-b uniform-fusion --out "$ROOT/eval/boot_h2s_handaware.json"
+
 echo "Report BOTH cosine and re-ranked numbers next to CiCo/SEDS (see README)."

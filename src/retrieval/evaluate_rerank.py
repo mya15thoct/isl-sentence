@@ -60,6 +60,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--out", type=Path, help="optional JSON dump of all metrics")
+    parser.add_argument(
+        "--dump-embeddings",
+        type=Path,
+        help="save per-checkpoint video/text embeddings + captions/groups/lengths "
+        "to a .pt file for offline analysis (bootstrap CIs, re-rank sweeps, error analysis)",
+    )
     return parser.parse_args()
 
 
@@ -76,8 +82,10 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
         hand_aware=bool(cfg.get("hand_aware", False)),
         context_parts=tuple(cfg.get("context_parts", ("pose", "face"))),
         motion=bool(cfg.get("motion_features", False)),
+        pose_pooling=str(cfg.get("pose_pooling", "attention")),
         text_model_name=str(cfg.get("text_model", DEFAULT_TEXT_MODEL)),
         max_text_length=int(cfg.get("max_text_length", 64)),
+        text_pooling=str(cfg.get("text_pooling", "mean")),
     )
     model.load_state_dict(state["model_state"])
     return model.to(device).eval()
@@ -94,10 +102,13 @@ def encode_manifest(
     model: PoseTextRetrievalModel,
     loader: DataLoader,
     device: torch.device,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
     video_chunks: list[torch.Tensor] = []
     text_chunks: list[torch.Tensor] = []
     group_chunks: list[torch.Tensor] = []
+    length_chunks: list[torch.Tensor] = []
+    uids: list[str] = []
+    captions: list[str] = []
     for batch in loader:
         keypoints = batch["keypoints"].to(device, non_blocking=True)
         lengths = batch["lengths"].to(device, non_blocking=True)
@@ -108,10 +119,14 @@ def encode_manifest(
         video_chunks.append(video.float().cpu())
         text_chunks.append(text.float().cpu())
         group_chunks.append(batch["group_ids"])
+        length_chunks.append(batch["lengths"])
+        uids.extend(batch["uids"])
+        captions.extend(batch["texts"])
     video = F.normalize(torch.cat(video_chunks), dim=-1, eps=1e-6)
     text = F.normalize(torch.cat(text_chunks), dim=-1, eps=1e-6)
     groups = torch.cat(group_chunks)
-    return video, text, groups
+    meta = {"uids": uids, "captions": captions, "lengths": torch.cat(length_chunks)}
+    return video, text, groups, meta
 
 
 def dsl_rerank(sim: torch.Tensor, temp: float) -> torch.Tensor:
@@ -242,18 +257,43 @@ def main() -> None:
 
     sim_sum: torch.Tensor | None = None
     group_ids: torch.Tensor | None = None
+    meta: dict | None = None
+    video_embs: list[torch.Tensor] = []
+    text_embs: list[torch.Tensor] = []
     for ckpt in args.checkpoints:
         print(f"encoding with {ckpt} ...", flush=True)
         model = build_model_from_checkpoint(ckpt, device)
-        video, text, groups = encode_manifest(model, loader, device)
+        video, text, groups, meta = encode_manifest(model, loader, device)
         sim = video @ text.T
         sim_sum = sim if sim_sum is None else sim_sum + sim
         group_ids = groups
+        if args.dump_embeddings:
+            video_embs.append(video.half())
+            text_embs.append(text.half())
         del model
         if device.type == "cuda":
             torch.cuda.empty_cache()
-    assert sim_sum is not None and group_ids is not None
+    assert sim_sum is not None and group_ids is not None and meta is not None
     sim = sim_sum / len(args.checkpoints)
+
+    if args.dump_embeddings:
+        args.dump_embeddings.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(
+            {
+                # fp16 embeddings per checkpoint; ensembles average the per-ckpt
+                # similarity matrices downstream, exactly as done here.
+                "video_embeddings": video_embs,
+                "text_embeddings": text_embs,
+                "group_ids": group_ids,
+                "uids": meta["uids"],
+                "captions": meta["captions"],
+                "lengths": meta["lengths"],
+                "checkpoints": [str(c) for c in args.checkpoints],
+                "manifest": str(args.manifest),
+            },
+            args.dump_embeddings,
+        )
+        print(f"embeddings dumped: {args.dump_embeddings}")
 
     n = sim.size(0)
     all_results: dict[str, dict] = {}
