@@ -29,13 +29,19 @@ echo "== run_all_missing started $(date)  (with-how2sign=$WITH_H2S) =="
 
 wait_gpu () {
   # Training needs most of the A6000; wait until the current occupant finishes.
+  # Also wait while ANOTHER run_all_missing/ablation instance is training or
+  # evaluating, so two sessions can never grab the GPU in the same gap and
+  # train the same row concurrently.
   while true; do
     used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
-    if [ "${used:-0}" -lt 8000 ]; then
-      echo "GPU free enough (${used} MiB used) — proceeding"
+    ours=$( (pgrep -f "src/retrieval/train.py"; \
+             pgrep -f "src.retrieval.evaluate_rerank"; \
+             pgrep -f "src.retrieval.robustness_eval") 2>/dev/null | sort -u | wc -l )
+    if [ "${used:-0}" -lt 8000 ] && [ "$ours" -eq 0 ]; then
+      echo "GPU free enough (${used} MiB used, no sibling train/eval) — proceeding"
       break
     fi
-    echo "[$(date '+%F %H:%M')] GPU busy (${used} MiB used) — retry in 10 min"
+    echo "[$(date '+%F %H:%M')] GPU busy (${used} MiB used, sibling procs: $ours) — retry in 10 min"
     sleep 600
   done
 }
