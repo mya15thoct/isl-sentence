@@ -35,22 +35,35 @@ exec > >(tee -a "$MAINLOG") 2>&1
 echo "== run_all_missing started $(date)  (with-how2sign=$WITH_H2S) =="
 
 wait_gpu () {
-  # Training needs most of the A6000; wait until the current occupant finishes.
-  # Also wait while ANOTHER run_all_missing/ablation instance is training or
-  # evaluating, so two sessions can never grab the GPU in the same gap and
-  # train the same row concurrently.
+  # Training needs most of the A6000; wait until any OTHER (non-project) job
+  # finishes. This is a coarse poll, not a lock — see run_locked() below for
+  # what actually prevents two of OUR sessions from colliding.
   while true; do
     used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
-    ours=$( (pgrep -f "src/retrieval/train.py"; \
-             pgrep -f "src.retrieval.evaluate_rerank"; \
-             pgrep -f "src.retrieval.robustness_eval") 2>/dev/null | sort -u | wc -l )
-    if [ "${used:-0}" -lt 8000 ] && [ "$ours" -eq 0 ]; then
-      echo "GPU free enough (${used} MiB used, no sibling train/eval) — proceeding"
+    if [ "${used:-0}" -lt 8000 ]; then
+      echo "GPU free enough (${used} MiB used) — proceeding"
       break
     fi
-    echo "[$(date '+%F %H:%M')] GPU busy (${used} MiB used, sibling procs: $ours) — retry in 10 min"
+    echo "[$(date '+%F %H:%M')] GPU busy (${used} MiB used) — retry in 10 min"
     sleep 600
   done
+}
+
+# A process-scanning check (pgrep) polled every 10 min left a real gap: two
+# sessions both training clip4clip_meanp concurrently, overwriting each
+# other's checkpoint/log (observed 2026-07-20). flock is kernel-enforced and
+# blocking (no poll gap), so it replaces that check for OUR OWN concurrency:
+# only one run_ablation.sh / run_how2sign.sh across ALL sessions can hold this
+# lock at a time; a second session blocks here until the first fully finishes.
+LOCKFILE="$ROOT/train.lock"
+run_locked () {
+  echo "[$(date '+%F %H:%M')] waiting for the training lock ($LOCKFILE) ..."
+  (
+    flock -x 200
+    echo "[$(date '+%F %H:%M')] lock acquired — running: $*"
+    wait_gpu
+    "$@"
+  ) 200>"$LOCKFILE"
 }
 
 # ---- A. How2Sign data prep (CPU-bound; overlaps with the busy GPU) ----------
@@ -74,22 +87,21 @@ if [ "$WITH_H2S" = 1 ]; then
 fi
 
 # ---- B + C. iSign: train the missing ablation/baseline rows ------------------
-wait_gpu
 echo "== C. ablation & baseline rows (rows with a checkpoint are skipped) =="
-bash scripts/run_ablation.sh
+run_locked bash scripts/run_ablation.sh
 
-# ---- D. full analysis pipeline ----------------------------------------------
+# ---- D. full analysis pipeline (also locked: two sessions dumping the same
+#         checkpoint concurrently could interleave-write the same .pt file) --
 echo "== D. significance / sensitivity / error analysis / audits =="
-bash scripts/run_significance.sh
+run_locked bash scripts/run_significance.sh
 
 # ---- E. How2Sign ladder ------------------------------------------------------
 if [ "$WITH_H2S" = 1 ]; then
   if [ ! -f "$H2S/manifests/how2sign_test.csv" ]; then
     echo "!! How2Sign manifests missing — skip stage E (re-run later to resume)"
   else
-    wait_gpu
     echo "== E. How2Sign training + official-pool eval + bootstrap =="
-    bash cross_dataset/run_how2sign.sh
+    run_locked bash cross_dataset/run_how2sign.sh
   fi
 fi
 
