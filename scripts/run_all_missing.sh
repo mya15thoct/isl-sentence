@@ -35,16 +35,18 @@ exec > >(tee -a "$MAINLOG") 2>&1
 echo "== run_all_missing started $(date)  (with-how2sign=$WITH_H2S) =="
 
 wait_gpu () {
-  # Training needs most of the A6000; wait until any OTHER (non-project) job
-  # finishes. This is a coarse poll, not a lock — see run_locked() below for
-  # what actually prevents two of OUR sessions from colliding.
+  # One training run peaks around 18 GB. On the 48 GB A6000 we can happily
+  # coexist with other jobs — so start as soon as there is enough FREE memory
+  # for our run plus a margin, regardless of how much others are using.
+  # Override the requirement with MIN_FREE_MIB=... if you want it tighter/looser.
+  local need=${MIN_FREE_MIB:-22000}
   while true; do
-    used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
-    if [ "${used:-0}" -lt 8000 ]; then
-      echo "GPU free enough (${used} MiB used) — proceeding"
+    free=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
+    if [ "${free:-0}" -ge "$need" ]; then
+      echo "GPU has ${free} MiB free (need ${need}) — proceeding"
       break
     fi
-    echo "[$(date '+%F %H:%M')] GPU busy (${used} MiB used) — retry in 10 min"
+    echo "[$(date '+%F %H:%M')] only ${free} MiB free (need ${need}) — retry in 10 min"
     sleep 600
   done
 }
