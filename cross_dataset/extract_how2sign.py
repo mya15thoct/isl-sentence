@@ -42,7 +42,11 @@ def _extract_one(job: tuple[str, str, bool]) -> tuple[str, str]:
             return video_path, f"BAD_SHAPE {getattr(arr, 'shape', None)}"
         out = Path(out_path)
         out.parent.mkdir(parents=True, exist_ok=True)
-        tmp = out.with_suffix(".npy.tmp")
+        # np.save appends ".npy" when the name does not already end in it, so the
+        # temp file MUST end in ".npy" — a ".npy.tmp" name silently became
+        # "<stem>.npy.tmp.npy", leaving the atomic replace to fail on a missing
+        # source. Keep the ".npy" ending on the temp path.
+        tmp = out.parent / (out.stem + ".tmp.npy")
         np.save(tmp, arr.astype(np.float32))
         tmp.replace(out)
         if delete_after:
