@@ -70,7 +70,10 @@ run_locked () {
 
 # ---- A. How2Sign data prep (CPU-bound; overlaps with the busy GPU) ----------
 if [ "$WITH_H2S" = 1 ]; then
-  if [ -f "$H2S/manifests/how2sign_test.csv" ]; then
+  # "Prepared" requires BOTH the manifest AND real keypoints — a failed extract
+  # run can leave an all-missing manifest behind, which must NOT count as done.
+  if [ -f "$H2S/manifests/how2sign_test.csv" ] && \
+     [ -n "$(find "$H2S/keypoints/test" -name '*.npy' 2>/dev/null | head -1)" ]; then
     echo "== A. How2Sign data already prepared — skip =="
   elif bash cross_dataset/download_how2sign.sh; then
     echo "== A. How2Sign extract (MediaPipe, CPU, hours) + manifests =="
