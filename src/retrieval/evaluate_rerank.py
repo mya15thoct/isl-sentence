@@ -82,6 +82,7 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
         hand_aware=bool(cfg.get("hand_aware", False)),
         context_parts=tuple(cfg.get("context_parts", ("pose", "face"))),
         motion=bool(cfg.get("motion_features", False)),
+        motion_hands=bool(cfg.get("motion_hands", False)),
         pose_pooling=str(cfg.get("pose_pooling", "attention")),
         frame_encoder=str(cfg.get("frame_encoder", "parts")),
         temporal=str(cfg.get("temporal", "conformer")),
@@ -93,11 +94,12 @@ def build_model_from_checkpoint(path: Path, device: torch.device) -> PoseTextRet
     return model.to(device).eval()
 
 
-def checkpoint_input_flags(path: Path) -> tuple[bool, bool, tuple[str, ...]]:
-    """(motion_features, face_keep, input_parts) the checkpoint was trained with."""
+def checkpoint_input_flags(path: Path) -> tuple[bool, bool, bool, tuple[str, ...]]:
+    """(motion_features, motion_hands, face_keep, input_parts) the checkpoint used."""
     cfg = torch.load(path, map_location="cpu", weights_only=False).get("config", {})
     return (
         bool(cfg.get("motion_features", False)),
+        bool(cfg.get("motion_hands", False)),
         bool(cfg.get("face_keep", False)),
         tuple(cfg.get("input_parts", ("pose", "face", "hands"))),
     )
@@ -236,9 +238,11 @@ def main() -> None:
     device = torch.device(args.device if torch.cuda.is_available() or args.device == "cpu" else "cpu")
 
     # Match the input representation the checkpoints were trained with.
-    motion, face_keep, input_parts = checkpoint_input_flags(args.checkpoints[0])
+    motion, motion_hands, face_keep, input_parts = checkpoint_input_flags(args.checkpoints[0])
     if motion:
-        print("checkpoints use motion features (position + velocity + acceleration)")
+        print("checkpoints use motion features over ALL keypoints (pos+vel+accel)")
+    if motion_hands:
+        print("checkpoints use hand-only motion features (pos + hand vel/accel)")
     if face_keep:
         print("checkpoints use face-keep (lips/eyebrows/eyes only)")
     if set(input_parts) != {"pose", "face", "hands"}:
@@ -251,6 +255,7 @@ def main() -> None:
         sample_mode="uniform",
         limit=args.limit,
         motion_features=motion,
+        motion_hands=motion_hands,
         face_keep=face_keep,
         input_parts=input_parts,
     )

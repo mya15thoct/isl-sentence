@@ -113,6 +113,12 @@ run face_free --text-model "$BGE" --embedding-dim 1024 --input-parts pose hands
 # (Issue 10) reduced-face landmarks (lips/eyebrows/eyes only) on the reference.
 run face_keep --text-model "$BGE" --embedding-dim 1024 --hand-aware --face-keep
 
+# ---- ARCHITECTURE contribution: hand-only motion (movement = a sign parameter) ----
+# The negative result was motion over ALL keypoints (--motion-features). Restricting
+# Δ/ΔΔ to the 126 hand dims targets the manual channel's dynamics without the
+# face-contour/z noise that sank the global version. Everything else = reference.
+run motion_hands --text-model "$BGE" --embedding-dim 1024 --hand-aware --motion-hands
+
 echo "ALL ABLATION RUNS COMPLETE."
 echo "Next: bash scripts/run_significance.sh — encodes TEST once per row, then runs"
 echo "bootstrap CIs, the re-rank sweep, error analysis, caption stats and split audits."

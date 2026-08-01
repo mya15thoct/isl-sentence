@@ -126,8 +126,8 @@ def main() -> None:
     args = parse_args()
     device = torch.device(args.device if torch.cuda.is_available() or args.device == "cpu" else "cpu")
 
-    motion, face_keep, input_parts = checkpoint_input_flags(args.checkpoint)
-    if motion:
+    motion, motion_hands, face_keep, input_parts = checkpoint_input_flags(args.checkpoint)
+    if motion or motion_hands:
         raise SystemExit("robustness_eval supports position-only checkpoints (hand slice differs with motion features)")
     dataset = RetrievalDataset(
         manifest=args.manifest,

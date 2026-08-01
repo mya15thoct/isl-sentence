@@ -84,7 +84,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hand-aware", action="store_true", help="hand-centric encoder: hands main path + residual cross-attention from pose/face")
     parser.add_argument("--context-parts", nargs="*", choices=["pose", "face"], default=["pose", "face"], help="hand-aware ablation: which parts feed the cross-attention context (empty = hands only)")
-    parser.add_argument("--motion-features", action="store_true", help="append per-frame velocity (Δ) and acceleration (ΔΔ) to positions (input becomes 3×1662); hand-aware only")
+    parser.add_argument("--motion-features", action="store_true", help="append per-frame velocity (Δ) and acceleration (ΔΔ) to positions over ALL keypoints (input 3×1662); hand-aware only. NOTE: negative result — floods the MLP with face/z motion noise.")
+    parser.add_argument("--motion-hands", action="store_true", help="append Δ/ΔΔ for the HANDS ONLY (input 1914); targets sign movement in the manual channel without the face/z noise that sank --motion-features. hand-aware only")
     parser.add_argument("--face-keep", action="store_true", help="zero all face landmarks except lips/eyebrows/eyes (cut face noise); input stays 1662-d")
     parser.add_argument("--pose-pooling", choices=("attention", "mean"), default="attention", help="temporal pooling over frames; 'mean' + --pose-layers 0 gives the CLIP4Clip-meanP-style baseline")
     parser.add_argument("--text-pooling", choices=("mean", "cls"), default="mean", help="sentence pooling for the text encoder (bge-large officially uses CLS)")
@@ -442,6 +443,7 @@ def main() -> None:
         hand_aware=args.hand_aware,
         context_parts=tuple(args.context_parts),
         motion=args.motion_features,
+        motion_hands=args.motion_hands,
         pose_pooling=args.pose_pooling,
         frame_encoder=args.frame_encoder,
         temporal=args.temporal,
@@ -471,6 +473,7 @@ def main() -> None:
         augment_probability=args.augment_prob,
         augment_methods=args.augment_methods,
         motion_features=args.motion_features,
+        motion_hands=args.motion_hands,
         face_keep=args.face_keep,
         input_parts=tuple(args.input_parts),
     )
@@ -482,6 +485,7 @@ def main() -> None:
         sample_mode="uniform",
         limit=args.limit,
         motion_features=args.motion_features,
+        motion_hands=args.motion_hands,
         face_keep=args.face_keep,
         input_parts=tuple(args.input_parts),
     )

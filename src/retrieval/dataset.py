@@ -111,6 +111,33 @@ def add_motion_features(keypoints: np.ndarray, normalize: bool = True) -> np.nda
     return np.concatenate([keypoints, velocity, acceleration], axis=1).astype(np.float32)
 
 
+# Hand block within the 1662-d frame: pose 132 + face 1404, then hands [1536:1662].
+HANDS_START = 132 + 1404  # 1536
+HANDS_END = KEYPOINT_DIM   # 1662
+
+
+def add_hand_motion_features(keypoints: np.ndarray, normalize: bool = True) -> np.ndarray:
+    """Append per-frame velocity/acceleration for the HANDS ONLY.
+
+    Motivated by the negative result that motion over ALL 1662 keypoints degrades
+    retrieval — the velocity of noisy face-contour and unreliable-z points floods
+    the shared MLP. Movement is one of the five sign parameters, and it lives in
+    the manual channel; restricting Δ/ΔΔ to the 126 hand dims targets that signal
+    without the noise. Layout: ``[position(1662) | hand_vel(126) | hand_acc(126)]``
+    = (T, 1914). Velocity/acceleration normalized per-sequence as in
+    ``add_motion_features``.
+    """
+    hands = keypoints[:, HANDS_START:HANDS_END]  # (T, 126)
+    velocity = np.zeros_like(hands)
+    velocity[1:] = hands[1:] - hands[:-1]
+    acceleration = np.zeros_like(velocity)
+    acceleration[1:] = velocity[1:] - velocity[:-1]
+    if normalize:
+        velocity = velocity / (float(velocity.std()) + 1e-6)
+        acceleration = acceleration / (float(acceleration.std()) + 1e-6)
+    return np.concatenate([keypoints, velocity, acceleration], axis=1).astype(np.float32)
+
+
 def sample_keypoints(keypoints: np.ndarray, max_frames: int, sample_mode: str) -> np.ndarray:
     if max_frames <= 0 or keypoints.shape[0] <= max_frames:
         return keypoints
@@ -154,9 +181,12 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         augment_probability: float = 0.75,
         augment_methods: list[str] | None = None,
         motion_features: bool = False,
+        motion_hands: bool = False,
         face_keep: bool = False,
         input_parts: tuple[str, ...] | None = None,
     ) -> None:
+        if motion_features and motion_hands:
+            raise ValueError("motion_features (all keypoints) and motion_hands are mutually exclusive")
         rows = read_csv(manifest)
         if limit is not None:
             rows = rows[:limit]
@@ -187,6 +217,7 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
         self.augment_probability = augment_probability
         self.augment_methods = augment_methods or []
         self.motion_features = motion_features
+        self.motion_hands = motion_hands
         self.face_keep = face_keep
         # None or the full part set = no masking (avoids a pointless multiply).
         if input_parts is not None and set(input_parts) != set(PART_SLICES):
@@ -218,6 +249,8 @@ class RetrievalDataset(torch.utils.data.Dataset[RetrievalSample]):
             keypoints = keypoints * FACE_KEEP_MASK  # zero non-mouth/eyebrow/eye face points
         if self.motion_features:
             keypoints = add_motion_features(keypoints)
+        elif self.motion_hands:
+            keypoints = add_hand_motion_features(keypoints)
 
         return RetrievalSample(
             uid=row.get("uid", ""),
