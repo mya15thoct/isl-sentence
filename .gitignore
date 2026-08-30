@@ -38,8 +38,6 @@ txt
 # Local docs (not for repo)
 docs/
 
-# Claude local config (not for repo)
-.claude/
 
 
 test/
